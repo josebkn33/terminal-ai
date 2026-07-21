@@ -146,15 +146,16 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 #musicPanel .music-info { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.3rem; }
 #musicPanel .music-info .song-title { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #musicPanel .music-close { position: absolute; top: 0.3rem; right: 0.5rem; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; }
-#musicPanel .music-results { max-height: 120px; overflow-y: auto; display: none; flex-direction: column; gap: 0.2rem; }
+#musicPanel .music-results { max-height: 150px; overflow-y: auto; display: none; flex-direction: column; gap: 0.15rem; }
 #musicPanel .music-results.show { display: flex; }
 #musicPanel .music-results .mr-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; font-size: 0.6rem; }
 #musicPanel .music-results .mr-item:hover { border-color: var(--text-dim); background: var(--surface-2); }
-#musicPanel .music-results .mr-item .mr-thumb { width: 32px; height: 24px; border-radius: 2px; flex-shrink: 0; object-fit: cover; background: var(--surface-3); }
+#musicPanel .music-results .mr-item .mr-icon { font-size: 0.8rem; flex-shrink: 0; width: 24px; text-align: center; }
 #musicPanel .music-results .mr-item .mr-title { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#musicPanel .music-results .mr-item .mr-dur { color: var(--text-muted); font-size: 0.5rem; }
+#musicPanel .music-results .mr-item .mr-dur { color: var(--text-muted); font-size: 0.5rem; flex-shrink: 0; }
 #musicPanel .music-loading { font-size: 0.55rem; color: var(--text-muted); display: none; }
 #musicPanel .music-loading.show { display: block; }
+#musicPanel .music-hint { font-size: 0.5rem; color: var(--text-muted); letter-spacing: 0.5px; }
 
 .floating-player { position: fixed; bottom: 70px; right: 20px; width: 340px; z-index: 50; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 0 30px rgba(0,0,0,0.8); display: none; }
 .floating-player.show { display: block; }
@@ -250,6 +251,7 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
     </div>
     <div class="music-loading" id="musicLoading">Buscando...</div>
     <div class="music-results" id="musicResults"></div>
+    <div class="music-hint">Sugerencias al escribir. Enter para buscar directo.</div>
     <div class="music-info">🎵 <span class="song-title" id="musicNow">Sin reproducción</span></div>
   </div>
 
@@ -680,55 +682,84 @@ function addSysMsg(text) {
   saveMessages();
 }
 
-// MUSIC PLAYER — búsqueda por nombre, reproductor flotante
-let currentVid = '';
+// MUSIC PLAYER — autocomplete + búsqueda embed
+let currentVid = '', suggestTimer;
 musicBtn.addEventListener('click', () => { musicPanel.classList.toggle('show'); if (musicPanel.classList.contains('show')) musicInput.focus(); });
 musicClose.addEventListener('click', () => musicPanel.classList.remove('show'));
-musicPlayBtn.addEventListener('click', searchMusic);
-musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchMusic(); });
+musicPlayBtn.addEventListener('click', () => searchMusic(musicInput.value.trim()));
+musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { searchMusic(musicInput.value.trim()); } });
 fpClose.addEventListener('click', () => { floatingPlayer.classList.remove('show'); musicBtn.classList.remove('playing'); });
 
-async function searchMusic() {
+// Autocomplete mientras escribe
+musicInput.addEventListener('input', () => {
+  clearTimeout(suggestTimer);
   const q = musicInput.value.trim();
-  if (!q || q.length < 2) return;
-  musicLoading.classList.add('show');
-  musicResults.innerHTML = '';
-  musicResults.classList.remove('show');
+  if (q.length < 2) { musicResults.classList.remove('show'); return; }
+  suggestTimer = setTimeout(() => fetchSuggestions(q), 300);
+});
+
+async function fetchSuggestions(q) {
   try {
-    const r = await fetch('https://yt.artemislena.eu/api/v1/search?q=' + encodeURIComponent(q));
-    const d = await r.json();
-    musicLoading.classList.remove('show');
-    const vids = (d || []).filter(v => v.type === 'video' && v.videoId).slice(0, 6);
-    if (vids.length === 0) throw new Error('sin resultados');
+    const r = await fetch('https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=' + encodeURIComponent(q));
+    const text = await r.text();
+    const match = text.match(/\["([^"]+)"[^\]]*\]/);
+    if (!match) return;
+    const data = JSON.parse('[' + text.slice(text.indexOf('['), text.lastIndexOf(']') + 1) + ']');
+    const suggestions = data[1] || [];
+    if (suggestions.length === 0) return;
     musicResults.innerHTML = '';
-    vids.forEach(v => {
+    suggestions.slice(0, 8).forEach(s => {
+      const title = typeof s === 'string' ? s : s[0];
       const item = document.createElement('div');
       item.className = 'mr-item';
-      item.innerHTML = '<img class="mr-thumb" src="https://i.ytimg.com/vi/' + v.videoId + '/default.jpg" alt="">' +
-        '<span class="mr-title">' + esc(v.title || 'Sin título') + '</span>' +
-        '<span class="mr-dur">' + (v.lengthSeconds ? Math.floor(v.lengthSeconds/60) + ':' + String(v.lengthSeconds%60).padStart(2,'0') : '') + '</span>';
-      item.addEventListener('click', () => playVideo(v.videoId, v.title || 'Canción'));
+      item.innerHTML = '<span class="mr-icon">🎵</span><span class="mr-title">' + esc(title) + '</span><span class="mr-dur">↗</span>';
+      item.addEventListener('click', () => { musicInput.value = title; searchMusic(title); });
       musicResults.appendChild(item);
     });
     musicResults.classList.add('show');
-  } catch (e) {
-    musicLoading.classList.remove('show');
-    // Fallback: usar embed search si falla la API
-    const embedUrl = 'https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(q) + '&autoplay=1';
-    fpEmbed.innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
-    fpTitle.textContent = '🔍 ' + q;
-    floatingPlayer.classList.add('show');
-    musicBtn.classList.add('playing');
-    musicNow.textContent = q;
-    musicPanel.classList.remove('show');
-    const priv = currentRoom === 'jose';
-    const ch = priv ? CH_JOSE : CH_GLOBAL;
-    broadcast(ch, 'message', { text: '🎵 Buscando: ' + q, priv });
-    const msg = { user: myNick, text: '🎵 ' + q, time: time(), priv };
-    if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
-    else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
-    saveMessages();
-  }
+  } catch {}
+}
+
+function searchMusic(q) {
+  if (!q || q.length < 2) return;
+  musicResults.classList.remove('show');
+  musicLoading.classList.add('show');
+  // Intentar API de Invidious primero
+  fetch('https://yt.artemislena.eu/api/v1/search?q=' + encodeURIComponent(q) + '&fields=videoId,title,lengthSeconds,type')
+    .then(r => r.json())
+    .then(d => {
+      musicLoading.classList.remove('show');
+      const vids = (d || []).filter(v => v.type === 'video' && v.videoId).slice(0, 5);
+      if (vids.length === 0) throw new Error('no results');
+      musicResults.innerHTML = '';
+      vids.forEach(v => {
+        const item = document.createElement('div');
+        item.className = 'mr-item';
+        const dur = v.lengthSeconds ? Math.floor(v.lengthSeconds/60) + ':' + String(v.lengthSeconds%60).padStart(2,'0') : '';
+        item.innerHTML = '<span class="mr-icon">▶️</span><span class="mr-title">' + esc(v.title || '') + '</span><span class="mr-dur">' + dur + '</span>';
+        item.addEventListener('click', () => playVideo(v.videoId, v.title || q));
+        musicResults.appendChild(item);
+      });
+      musicResults.classList.add('show');
+    })
+    .catch(() => {
+      musicLoading.classList.remove('show');
+      // Fallback: embed search directo
+      const embedUrl = 'https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(q) + '&autoplay=1';
+      fpEmbed.innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
+      fpTitle.textContent = '🔍 ' + q;
+      floatingPlayer.classList.add('show');
+      musicBtn.classList.add('playing');
+      musicNow.textContent = q;
+      musicPanel.classList.remove('show');
+      const priv = currentRoom === 'jose';
+      const ch = priv ? CH_JOSE : CH_GLOBAL;
+      broadcast(ch, 'message', { text: '🎵 Buscando: ' + q, priv });
+      const msg = { user: myNick, text: '🎵 ' + q, time: time(), priv };
+      if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
+      else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
+      saveMessages();
+    });
 }
 
 function playVideo(vid, title) {
@@ -739,10 +770,9 @@ function playVideo(vid, title) {
   musicBtn.classList.add('playing');
   musicNow.textContent = title;
   musicPanel.classList.remove('show');
-  // Share en chat
   const priv = currentRoom === 'jose';
   const ch = priv ? CH_JOSE : CH_GLOBAL;
-  broadcast(ch, 'message', { text: '🎵 ' + title + ' https://www.youtube.com/watch?v=' + vid, priv });
+  broadcast(ch, 'message', { text: '🎵 ' + title, priv });
   const msg = { user: myNick, text: '🎵 ' + title, time: time(), priv };
   if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
   else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
