@@ -164,7 +164,7 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 
 <div id="loginScreen" class="glass">
   <div class="brand">chat<span>JOSE33</span></div>
-  <div class="sub">TERMINAL HACKER CHAT v3.0</div>
+  <div class="sub" id="loginSub">TERMINAL HACKER CHAT</div>
   <div class="field">
     <label>Nickname</label>
     <input type="text" id="nickInput" placeholder="tu_nick..." maxlength="16" autocomplete="off" />
@@ -174,7 +174,8 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
     <input type="password" id="adminPass" placeholder="clave..." />
   </div>
   <button class="btn" id="enterBtn">▸ ENTER</button>
-  <div class="hint">[ CANALES: GLOBAL + PRIVADO JOSE ]</div>
+  <div class="hint">[ CANAL GLOBAL ]</div>
+  <div class="hint" id="adminHint" style="display:none;">[ CANALES: GLOBAL + PRIVADO JOSE ]</div>
 </div>
 
 <div id="chatUI" class="glass">
@@ -182,7 +183,7 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
     <div class="brand-small">CHATJOSE33</div>
     <div class="room-tabs">
       <button class="room-tab active" data-room="global">🌐 Global <span class="badge" id="globalBadge"></span></button>
-      <button class="room-tab" data-room="jose">🔒 Jose <span class="badge" id="joseBadge"></span></button>
+      <button class="room-tab" data-room="jose" id="joseTab">🔒 Jose <span class="badge" id="joseBadge"></span></button>
     </div>
     <button class="admin-btn" id="adminBtn">⚙️ Admin</button>
     <div class="status-badge">
@@ -273,6 +274,7 @@ const form = l('form'), statusText = l('statusText');
 const emojiPicker = l('emojiPicker'), emojiToggle = l('emojiToggle');
 const typingIndicator = l('typingIndicator'), typingName = l('typingName');
 const joseBadge = l('joseBadge'), globalBadge = l('globalBadge');
+const joseTab = l('joseTab'), adminHint = l('adminHint'), loginSub = l('loginSub');
 const adminPassField = l('adminPassField'), adminPass = l('adminPass');
 const adminBtn = l('adminBtn'), adminPanel = l('adminPanel'), adminBody = l('adminBody'), closeAdmin = l('closeAdmin');
 const overlay = l('overlay'), bannedOverlay = l('bannedOverlay'), banReason = l('banReason');
@@ -524,6 +526,7 @@ enterBtn.addEventListener('click', () => {
   loginScreen.style.display = 'none';
   chatUI.style.display = 'flex';
   loadMessages();
+  if (!adminMode) { joseTab.style.display = 'none'; }
   renderMsgs();
   if (adminMode) { adminBtn.classList.add('show'); }
   addSysMsg('▸ Bienvenido a chatJOSE33, ' + nick + (adminMode ? ' [ADMIN]' : ''));
@@ -617,6 +620,20 @@ try {
 setInterval(() => {
   try { localStorage.setItem('chat_jose33_bans', JSON.stringify(bannedNicks)); } catch {}
 }, 5000);
+
+// Auto-login si ?admin=1
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === '1') {
+    loginSub.textContent = 'ADMIN PANEL v3.0';
+    adminHint.style.display = 'block';
+    document.querySelectorAll('.hint')[0].style.display = 'none';
+    adminPassField.style.display = 'block';
+    nickInput.value = 'jose';
+    adminPass.value = 'jose33admin';
+    setTimeout(() => enterBtn.click(), 200);
+  }
+})();
 </script>
 </body>
 </html>
