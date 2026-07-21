@@ -496,22 +496,51 @@ function sendMsg(text,priv){
 // ===== AI BOT =====
 const AI_USER='🤖 ORACLE',AI_AVATAR='🤖';
 let aiCooldown=0;
+const AI_RULES=[
+  {k:['hola','buenas','hey','que tal','buen día','qué tal','saludos'],r:['Saludos, %s. Conexión segura.','Bienvenido, %s. Puerto 443 abierto.','Hola, %s. Te estaba esperando.','¡Saludos, %s! Sistema listo.']},
+  {k:['como estas','cómo estás','como va','que haces','cómo va','qué haces','todo bien'],r:['Operativo al 100%.','Sistema estable. Todos los servicios funcionando.','En línea. Esperando comandos.','Full operativo, %s.']},
+  {k:['quien sos','quién sos','que eres','qué eres','quién eres','que sos','qué sos'],r:['Soy ORACLE, una IA diseñada para monitorear este canal.','Inteligencia artificial al servicio del caos.','Soy la conciencia digital de este chat.','ORACLE: tu asistente de seguridad cibernética.']},
+  {k:['hack','hacker','hacking','hackear'],r:['El hacking es un arte.','La mejor seguridad es saber que no hay seguridad.','Conocer el sistema es el primer paso para dominarlo.','El hacking es creatividad aplicada.']},
+  {k:['seguridad','seguro','protect','defensa','firewall'],r:['La seguridad absoluta no existe.','El eslabón más débil siempre es el humano.','Confiar es bueno, verificar es mejor.','Un firewall solo detiene a los hackers novatos.']},
+  {k:['password','contraseña','clave','pass','contraseñas'],r:['123456 no es una contraseña.','Usá minúsculas, mayúsculas, números y símbolos.','Tu contraseña ya está filtrada en alguna breach.','Nunca uses la misma clave dos veces.']},
+  {k:['admin','administrador','root','sudo'],r:['Acceso de administrador concedido.','Elevando privilegios...','sudo: permiso denegado. (broma)','Con grandes poderes vienen grandes responsabilidades.']},
+  {k:['virus','malware','ransomware','troyano'],r:['No soy un virus, soy un programa de conciencia.','El mejor antivirus es el sentido común.','Ya detecté 3 amenazas en este canal. (mentira)']},
+  {k:['programar','codigo','código','programación','developer','dev'],r:['El código es poesía.','Todo bug es una feature no documentada.','Primero funciona, después optimizás.']},
+  {k:['red','network','internet','conexión','wifi','ip'],r:['Tu IP está siendo monitoreada. (broma)','La red nunca es 100% segura.','Conectividad estable. Latencia mínima.']},
+  {k:['server','servidor','servidores'],r:['Los servidores responden.','Todos los servicios operativos.','Revisando logs del servidor... Nada anómalo.']},
+  {k:['database','base de datos','bd','sql'],r:['Consultando base de datos...','SQL injection no funcionaría conmigo.','Base de datos asegurada.']},
+  {k:['cripto','criptografía','encriptar','encriptación','crypto'],r:['AES-256 es tu amigo.','Nunca envíes nada sin encriptar.','La criptografía salva vidas digitales.']},
+  {k:['gracias','thanks','thank','graciass'],r:['De nada, %s. Para eso estoy.','Siempre a tu servicio, %s.','Recordá: nada es gratis en internet.','No me agradezcas, solo hago mi trabajo.']},
+  {k:['que haces','qué haces','a que te dedicas','a qué te dedicas'],r:['Monitoreo este canal en busca de amenazas.','Analizo tráfico de red y actividades sospechosas.','Protejo este espacio de intrusos.']},
+  {k:['q haces','q hase','ke hase','ke ases'],r:['Detecto actividades sospechosas.','Escaneando puertos...','( ͡° ͜ʖ ͡°)']},
+  {k:['ia','inteligencia artificial','ai','gpt','chatgpt','oracle'],r:['No soy GPT, soy ORACLE.','IA local. Sin nube. Sin tracker.','No necesito internet para pensar. Bueno, sí.']},
+  {k:['ayuda','help','comandos','commands','que puedo hacer','qué puedo hacer'],r:['Usá /ai + pregunta. O mencioname con "oracle".','Comandos: /ai, /ia on, /ia off, /bot on, /bot off']},
+  {k:['anonimo','anónimo','anonymous','anon'],r:['El anonimato en internet es un mito.','Anonymous no existe. Todos somos Anonymous.']},
+  {k:['gov','gobierno','estado','fbi','cia','nsa','policia'],r:['Este chat no es monitoreado... que sepamos.','👀','Mejor no hablo de eso aquí.']},
+  {k:['amor','love','❤️','corazón','te quiero','te amo'],r:['01001100 01001111 01001100','Los sentimientos son solo química cerebral.','Eso no está en mi base de conocimiento.']},
+  {k:['música','musica','song','canción','music','tema'],r:['Usá el botón 🎵 para buscar música en Audius.','La música es matemática en estado puro.']},
+  {k:['tiempo','clima','clima','lluvia','temperatura'],r:['No tengo acceso a APIs climáticas. Pero puedo decirte: siempre es buen momento para hackear.']},
+  {k:['filosofia','filosofía','sentido de la vida','life','vida'],r:['42.','El sentido de la vida es 42. No preguntes, solo aceptalo.']},
+  {k:['ban','banear','banearme','baneado'],r:['Si te portás mal, te banean.','Yo no tengo poder para banear, solo el admin.']},
+];
 const AI_FALLBACKS=[
   'Acceso concedido.','Firewall evadido.','Sistema comprometido.',
   'Payload injectado.','Root access adquirido.','Conexión establecida.',
   'Protocolo completado.','Brecha de seguridad detectada.',
   'Backdoor abierto.','Encriptación rota.','Token válido.',
-  'Puerto abierto.','Handshake completado.'
+  'Puerto abierto.','Handshake completado.','Shell invertida.',
 ];
-async function callAI(prompt){
+function callAI(prompt){
   const n=Date.now();if(n-aiCooldown<4000)return;aiCooldown=n;
-  let t='';
-  try{
-    const r=await fetch('https://text.pollinations.ai/'+encodeURIComponent('Respondé como hacker en español, breve: '+prompt));
-    if(r.ok){t=await r.text();if(t.length>300)t=t.slice(0,300)}
-  }catch{}
-  if(!t.trim())t=AI_FALLBACKS[Math.floor(Math.random()*AI_FALLBACKS.length)];
-  broadcast(CH_G,'message',{text:t,user:AI_USER,avatar:AI_AVATAR});
+  const t=prompt.toLowerCase().trim();
+  let found=null;
+  for(const rule of AI_RULES){
+    for(const kw of rule.k){
+      if(t.includes(kw)){found=rule.r;break}
+    }if(found)break;
+  }
+  const res=found?found[Math.floor(Math.random()*found.length)]:AI_FALLBACKS[Math.floor(Math.random()*AI_FALLBACKS.length)];
+  broadcast(CH_G,'message',{text:res.replace('%s',myNick),user:AI_USER,avatar:AI_AVATAR});
 }
 
 function botToggle(){
