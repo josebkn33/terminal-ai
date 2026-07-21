@@ -462,10 +462,44 @@ function broadcast(topic,type,extra){
 function sendMsg(text,priv){
   if(!ws||!connected)return;
   const ch=priv?CH_J:CH_G;
+  if(!priv&&text.startsWith('/ai ')&&text.length>4){
+    const p=text.slice(4).trim();if(!p)return;
+    broadcast(ch,'message',{text,priv});
+    const m={user:myNick,text,time:time(),priv,avatar:selectedAvatar};
+    gMsgs.push(m);if(currentRoom==='global')renderMsgs();saveMsgs();
+    callAI(p);return;
+  }
   broadcast(ch,'message',{text,priv});
   const msg={user:myNick,text,time:time(),priv,avatar:selectedAvatar};
   if(priv){jMsgs.push(msg);if(currentRoom==='jose')renderMsgs()}else{gMsgs.push(msg);if(currentRoom==='global')renderMsgs()}
   saveMsgs();
+}
+
+// ===== AI BOT =====
+const AI_USER='🤖 ORACLE',AI_AVATAR='🤖';
+let aiCooldown=0;
+const AI_FALLBACKS=[
+  'Acceso concedido.','Firewall evadido.','Sistema comprometido.',
+  'Payload injectado.','Root access adquirido.','Conexión establecida.',
+  'Protocolo completado.','Brecha de seguridad detectada.',
+  'Backdoor abierto.','Encriptación rota.','Token válido.',
+  'Puerto abierto.','Handshake completado.'
+];
+async function callAI(prompt){
+  const n=Date.now();if(n-aiCooldown<4000)return;aiCooldown=n;
+  let t='';
+  try{
+    const r=await fetch('https://api-inference.huggingface.co/models/google/flan-t5-large',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({inputs:'Respondé como hacker en español, breve: '+prompt})
+    });
+    if(!r.ok)throw Error();
+    const d=await r.json();
+    const raw=Array.isArray(d)?d[0]?.generated_text:d?.generated_text;
+    if(raw){t=raw.replace(prompt,'').trim();if(t.length>300)t=t.slice(0,300)}
+  }catch{}
+  if(!t)t=AI_FALLBACKS[Math.floor(Math.random()*AI_FALLBACKS.length)];
+  broadcast(CH_G,'message',{text:t,user:AI_USER,avatar:AI_AVATAR});
 }
 
 // TABS
