@@ -114,6 +114,23 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 .emoji-picker button { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0.15rem; border-radius: 3px; transition: background 0.15s; line-height: 1; }
 .emoji-picker button:hover { background: var(--surface-3); }
 
+/* STICKERS */
+.sticker-btn { background: none; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 0.25rem; transition: color 0.2s; line-height: 1; }
+.sticker-btn:hover { color: var(--text); }
+.sticker-picker { display: none; padding: 0.35rem 0.7rem; border-top: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; gap: 0.3rem; max-height: 140px; overflow-y: auto; }
+.sticker-picker.show { display: flex; }
+.sticker-picker button { background: var(--surface-3); border: 1px solid var(--border); border-radius: var(--radius); font-size: 1.5rem; cursor: pointer; padding: 0.3rem; transition: all 0.15s; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.sticker-picker button:hover { border-color: var(--text-dim); background: var(--surface-2); transform: scale(1.1); }
+.sticker-picker button .sl { font-size: 0.55rem; color: var(--text); letter-spacing: 0.5px; }
+
+.msg .sticker-content { font-size: 3rem; line-height: 1; text-align: center; padding: 0.2rem 0; }
+.msg .sticker-label { font-size: 0.55rem; color: var(--text-muted); text-align: center; letter-spacing: 1px; }
+.msg.other .sticker-content { font-size: 3rem; }
+.msg.mine .sticker-content { font-size: 3rem; }
+.msg .youtube-embed { margin-top: 0.3rem; border-radius: var(--radius); overflow: hidden; }
+.msg .youtube-embed iframe { width: 100%; max-width: 280px; height: 158px; border: 0; display: block; }
+.msg .youtube-link { display: inline-block; margin-top: 0.2rem; font-size: 0.6rem; color: var(--text-dim); text-decoration: underline; word-break: break-all; }
+
 /* ADMIN PANEL */
 #adminPanel { display: none; position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(0,0,0,0.95); border-left: 1px solid var(--border); z-index: 10; flex-direction: column; }
 #adminPanel.show { display: flex; }
@@ -218,8 +235,28 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
     <div class="emoji-picker" id="emojiPicker">
       <button>😀</button><button>😂</button><button>🤣</button><button>😅</button><button>😊</button><button>😎</button><button>🤩</button><button>😍</button><button>🥰</button><button>😜</button><button>🤪</button><button>😈</button><button>🔥</button><button>💀</button><button>☠️</button><button>👽</button><button>🤖</button><button>💪</button><button>👍</button><button>💯</button><button>✅</button><button>⚡</button><button>🔒</button><button>🛡️</button><button>🐍</button><button>⚔️</button><button>🎯</button>
     </div>
+    <div class="sticker-picker" id="stickerPicker">
+      <button data-sticker="💀"><span>💀</span></button>
+      <button data-sticker="🔥"><span>🔥</span></button>
+      <button data-sticker="👽"><span>👽</span></button>
+      <button data-sticker="🤖"><span>🤖</span></button>
+      <button data-sticker="🛡️"><span>🛡️</span></button>
+      <button data-sticker="⚔️"><span>⚔️</span></button>
+      <button data-sticker="🐍"><span>🐍</span></button>
+      <button data-sticker="💯"><span>💯</span></button>
+      <button data-sticker="🚀"><span>🚀</span></button>
+      <button data-sticker="👾"><span>👾</span></button>
+      <button data-sticker="🎯"><span>🎯</span></button>
+      <button data-sticker="⚡"><span>⚡</span></button>
+      <button data-sticker="LOL" style="font-size:0.65rem;font-weight:700;"><span class="sl">LOL</span></button>
+      <button data-sticker="GG" style="font-size:0.65rem;font-weight:700;"><span class="sl">GG</span></button>
+      <button data-sticker="PWNED" style="font-size:0.65rem;font-weight:700;"><span class="sl">PWNED</span></button>
+      <button data-sticker="HACKED" style="font-size:0.65rem;font-weight:700;"><span class="sl">HACKED</span></button>
+      <button data-sticker="EZ" style="font-size:0.65rem;font-weight:700;"><span class="sl">EZ</span></button>
+    </div>
     <form class="input-wrap" id="form">
       <button type="button" class="emoji-btn" id="emojiToggle">😀</button>
+      <button type="button" class="sticker-btn" id="stickerToggle">🎨</button>
       <input type="text" id="msgInput" placeholder="escribí un mensaje..." autocomplete="off" />
       <button type="submit" class="send-btn">⏎</button>
     </form>
@@ -272,6 +309,7 @@ const nickInput = l('nickInput'), enterBtn = l('enterBtn');
 const msgInput = l('msgInput'), msgContainer = l('msgContainer');
 const form = l('form'), statusText = l('statusText');
 const emojiPicker = l('emojiPicker'), emojiToggle = l('emojiToggle');
+const stickerPicker = l('stickerPicker'), stickerToggle = l('stickerToggle');
 const typingIndicator = l('typingIndicator'), typingName = l('typingName');
 const joseBadge = l('joseBadge'), globalBadge = l('globalBadge');
 const joseTab = l('joseTab'), adminHint = l('adminHint'), loginSub = l('loginSub');
@@ -333,8 +371,38 @@ function renderMsgs() {
     body.appendChild(author);
     const txt = document.createElement('div');
     txt.className = 'text';
-    txt.textContent = m.text;
-    body.appendChild(txt);
+    if (m.sticker) {
+      txt.className = 'sticker-content';
+      txt.textContent = m.sticker;
+      if (m.sticker.length > 2) { txt.style.fontSize = '1.8rem'; txt.style.fontWeight = '700'; txt.style.letterSpacing = '2px'; }
+      body.appendChild(txt);
+      const lbl = document.createElement('div');
+      lbl.className = 'sticker-label';
+      lbl.textContent = '/' + m.sticker;
+      body.appendChild(lbl);
+    } else {
+      // YouTube link detection
+      const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/g;
+      let lastIdx = 0, parts = [];
+      let match;
+      while ((match = ytRegex.exec(m.text)) !== null) {
+        if (match.index > lastIdx) parts.push(document.createTextNode(m.text.slice(lastIdx, match.index)));
+        const vid = match[1];
+        const wrap = document.createElement('div');
+        wrap.className = 'youtube-embed';
+        wrap.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=0&rel=0" allowfullscreen></iframe>';
+        parts.push(wrap);
+        lastIdx = match.index + match[0].length;
+      }
+      if (lastIdx === 0) {
+        txt.textContent = m.text;
+        body.appendChild(txt);
+      } else {
+        if (lastIdx < m.text.length) parts.push(document.createTextNode(m.text.slice(lastIdx)));
+        parts.forEach(p => { if (typeof p === 'string' || p instanceof Text) txt.appendChild(p); else body.appendChild(p); });
+        if (txt.childNodes.length > 0) body.appendChild(txt);
+      }
+    }
     const t = document.createElement('div');
     t.className = 'time';
     t.textContent = m.time;
@@ -488,6 +556,7 @@ form.addEventListener('submit', (e) => {
   msgInput.value = '';
   sendMsg(text, priv);
   emojiPicker.classList.remove('show');
+  stickerPicker.classList.remove('show');
 });
 
 // TYPING
@@ -499,9 +568,25 @@ msgInput.addEventListener('input', () => {
   typingTimeout = setTimeout(() => {}, 1000);
 });
 
-emojiToggle.addEventListener('click', () => emojiPicker.classList.toggle('show'));
+emojiToggle.addEventListener('click', () => { emojiPicker.classList.toggle('show'); stickerPicker.classList.remove('show'); });
 emojiPicker.querySelectorAll('button').forEach(btn => {
   btn.addEventListener('click', () => { msgInput.value += btn.textContent; msgInput.focus(); });
+});
+
+stickerToggle.addEventListener('click', () => { stickerPicker.classList.toggle('show'); emojiPicker.classList.remove('show'); });
+stickerPicker.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.sticker;
+    if (!s || !connected || !ws) return;
+    const priv = currentRoom === 'jose';
+    const ch = priv ? CH_JOSE : CH_GLOBAL;
+    broadcast(ch, 'message', { text: '/' + s, priv, sticker: s });
+    const msg = { user: myNick, text: '/' + s, time: time(), priv, sticker: s };
+    if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
+    else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
+    saveMessages();
+    stickerPicker.classList.remove('show');
+  });
 });
 
 // Detectar admin
