@@ -7,6 +7,7 @@
 <meta http-equiv="cache-control" content="no-cache" />
 <meta http-equiv="expires" content="0" />
 <meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src * wss://*.supabase.co https://*.supabase.co https://suggestqueries.google.com https://discoveryprovider.audius.co https://i.ytimg.com https://www.youtube.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://suggestqueries.google.com https://www.youtube.com; frame-src https://www.youtube.com; img-src 'self' https://*.audius.co https://i.ytimg.com https://yt3.ggpht.com data:;" />
 <title>chatJOSE33 — Terminal Hacker Chat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -400,6 +401,11 @@ let fpPlaying = false, fpTrackId = null;
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function time() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+async function sha256(s) { const e=new TextEncoder(); const d=await crypto.subtle.digest('SHA-256',e.encode(s)); return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+const ADMIN_HASH = '106f79496f3904835b3ac6e408b1ca8bf0ecc01bd89726c0e4d4b869b78b4b20';
+// Rate limiter
+let msgTimestamps = {};
+function checkFlood(nick) { const now=Date.now(); const ts=msgTimestamps[nick]||[]; const recent=ts.filter(t=>now-t<4000); if(recent.length>=5) return true; recent.push(now); msgTimestamps[nick]=recent; return false; }
 
 // Avatar generator: deterministic color + initials
 function getAvatar(nick) {
@@ -633,6 +639,7 @@ form.addEventListener('submit', (e) => {
   const text = msgInput.value.trim();
   if (!text || !connected || !ws) return;
   if (bannedNicks[myNick]) { showBanned('Estás en la lista de baneados'); return; }
+  if (checkFlood(myNick)) { addSysMsg('⏳ ' + myNick + ' — esperá antes de enviar'); return; }
   const priv = currentRoom === 'jose';
   msgInput.value = '';
   sendMsg(text, priv);
@@ -659,6 +666,7 @@ stickerPicker.querySelectorAll('button').forEach(btn => {
   btn.addEventListener('click', () => {
     const s = btn.dataset.sticker;
     if (!s || !connected || !ws) return;
+    if (checkFlood(myNick)) { addSysMsg('⏳ ' + myNick + ' — esperá antes de enviar'); return; }
     const priv = currentRoom === 'jose';
     const ch = priv ? CH_JOSE : CH_GLOBAL;
     broadcast(ch, 'message', { text: '/' + s, priv, sticker: s });
@@ -676,14 +684,14 @@ nickInput.addEventListener('input', () => {
   adminPassField.style.display = (n === 'jose' || n === 'admin') ? 'block' : 'none';
 });
 
-enterBtn.addEventListener('click', () => {
+enterBtn.addEventListener('click', async () => {
   const nick = nickInput.value.trim();
   if (!nick || nick.length < 2) { nickInput.focus(); return; }
   const lower = nick.toLowerCase();
   let adminMode = false;
   if (lower === 'jose' || lower === 'admin') {
     const pass = adminPass.value.trim();
-    if (pass !== 'jose33admin') { alert('🔒 Clave incorrecta para modo admin'); return; }
+    if (await sha256(pass) !== ADMIN_HASH) { alert('🔒 Clave incorrecta para modo admin'); return; }
     adminMode = true;
   }
   if (bannedNicks[nick]) { alert('🚫 Este nickname está baneado'); return; }
@@ -924,7 +932,7 @@ setInterval(() => {
     adminPassField.style.display = 'block';
     nickInput.value = 'jose';
     adminPass.value = 'jose33admin';
-    setTimeout(() => enterBtn.click(), 200);
+    setTimeout(() => { const e = new Event('click'); enterBtn.dispatchEvent(e); }, 200);
   }
 })();
 </script>
