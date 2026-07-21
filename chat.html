@@ -683,37 +683,8 @@ function addSysMsg(text) {
   saveMessages();
 }
 
-// MUSIC PLAYER — YouTube IFrame API + Google Suggest
-let ytPlayer = null, ytPlayerReady = false, suggestTimer;
-
-// Cargar YouTube IFrame API
-let ytQueue = [];
-(function() {
-  const tag = document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  document.head.appendChild(tag);
-})();
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayerReady = true;
-  fpContainer.innerHTML = '<div id="ytPlayerDiv"></div>';
-  ytPlayer = new YT.Player('ytPlayerDiv', {
-    height: 180, width: 340,
-    playerVars: { rel: 0, modestbranding: 1 },
-    events: {
-      onReady: () => { ytQueue.forEach(f => f()); ytQueue = []; },
-      onStateChange: (e) => {
-        if (e.data === YT.PlayerState.PLAYING) {
-          try { const d = ytPlayer.getVideoData(); if (d && d.title) { fpTitle.textContent = d.title; musicNow.textContent = d.title; } } catch {}
-        }
-      }
-    }
-  });
-};
-
-function initPlayer(cb) {
-  if (ytPlayer && ytPlayer.loadVideoById) { if (cb) cb(); return; }
-  if (cb) ytQueue.push(cb);
-}
+// MUSIC PLAYER — iframe embed directo (sin IFrame API problemática)
+let suggestTimer;
 
 musicBtn.addEventListener('click', () => {
   musicPanel.classList.toggle('show');
@@ -725,7 +696,7 @@ musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleMus
 fpClose.addEventListener('click', () => {
   floatingPlayer.classList.remove('show');
   musicBtn.classList.remove('playing');
-  if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+  fpContainer.innerHTML = '';
 });
 
 function handleMusicInput() {
@@ -750,7 +721,6 @@ musicInput.addEventListener('input', () => {
 });
 
 function fetchSuggestions(q) {
-  // Usar JSONP para evitar CORS
   const cb = 'ytSuggest' + Date.now();
   window[cb] = function(data) {
     const suggestions = (data && data[1]) || [];
@@ -782,9 +752,7 @@ function playSearch(q) {
   musicBtn.classList.add('playing');
   fpTitle.textContent = '🔍 ' + q;
   musicNow.textContent = q;
-  initPlayer(() => {
-    try { ytPlayer.loadPlaylist({ list: q, listType: 'search', index: 0, startSeconds: 0 }); } catch {}
-  });
+  fpContainer.innerHTML = '<iframe src="https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(q) + '&autoplay=1" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
   const priv = currentRoom === 'jose';
   const ch = priv ? CH_JOSE : CH_GLOBAL;
   broadcast(ch, 'message', { text: '🎵 ' + q, priv });
@@ -800,9 +768,7 @@ function playVideo(vid, title) {
   floatingPlayer.classList.add('show');
   musicBtn.classList.add('playing');
   musicPanel.classList.remove('show');
-  initPlayer(() => {
-    try { ytPlayer.loadVideoById(vid); } catch {}
-  });
+  fpContainer.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=1" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
   const priv = currentRoom === 'jose';
   const ch = priv ? CH_JOSE : CH_GLOBAL;
   broadcast(ch, 'message', { text: '🎵 ' + title, priv });
