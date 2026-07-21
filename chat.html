@@ -77,9 +77,9 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 .msg.mine .time { color: var(--text-dim); }
 .msg .tag-priv { display: inline-block; font-size: 0.5rem; background: rgba(255,0,68,0.2); color: var(--red); padding: 0.05rem 0.3rem; border-radius: 2px; margin-bottom: 0.1rem; letter-spacing: 1px; }
 
-.empty-msgs { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; }
-.empty-msgs .icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3; }
-.empty-msgs p { font-size: 0.65rem; max-width: 200px; line-height: 1.6; }
+.msgs .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; min-height: 200px; }
+.msgs .empty-state .icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.3; }
+.msgs .empty-state p { font-size: 0.65rem; max-width: 200px; line-height: 1.6; }
 
 .typing-indicator { align-self: flex-start; display: none; font-size: 0.6rem; color: var(--text-dim); padding: 0.2rem 0; letter-spacing: 0.5px; }
 .typing-indicator.show { display: block; }
@@ -141,10 +141,6 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
   </div>
 
   <div class="msgs" id="msgContainer"></div>
-  <div class="empty-msgs" id="emptyMsg">
-    <div class="icon">💬</div>
-    <p>Conectando...</p>
-  </div>
   <div class="typing-indicator" id="typingIndicator">▸ <span id="typingName"></span> está escribiendo...</div>
 
   <div class="emoji-picker" id="emojiPicker">
@@ -184,7 +180,7 @@ setInterval(drawMatrix, 45);
 const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBreGNmYW9rb2hpdmNyamVhemluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNTAxODEsImV4cCI6MjA5ODYyNjE4MX0.aZJ-aeZeaikMig24E2ax-L48EHwM-LJwonf5bkooIH8';
 const WS_URL = 'wss://pkxcfaokohivcrjeazin.supabase.co/realtime/v1/websocket?apikey=' + ANON_KEY + '&vsn=1.0.0';
 const CH_GLOBAL = 'realtime:chat-jose33-global';
-const CH_JOSE = 'realtime:chat-jose33-dm-' + Date.now().toString(36); // cambia cada deploy
+const CH_JOSE = 'realtime:chat-jose33-dm-v2'; // cambia cada deploy
 
 let ws, myNick = '', currentRoom = 'global', connected = false, isAdmin = false;
 let globalMsgs = [], joseMsgs = [];
@@ -194,7 +190,7 @@ const l = id => document.getElementById(id);
 const loginScreen = l('loginScreen'), chatUI = l('chatUI');
 const nickInput = l('nickInput'), enterBtn = l('enterBtn');
 const msgInput = l('msgInput'), msgContainer = l('msgContainer');
-const emptyMsg = l('emptyMsg'), form = l('form'), statusText = l('statusText');
+const form = l('form'), statusText = l('statusText');
 const emojiPicker = l('emojiPicker'), emojiToggle = l('emojiToggle');
 const typingIndicator = l('typingIndicator'), typingName = l('typingName');
 const joseBadge = l('joseBadge'), globalBadge = l('globalBadge');
@@ -207,13 +203,13 @@ function renderMsgs() {
   const msgs = currentRoom === 'global' ? globalMsgs : joseMsgs;
   msgContainer.innerHTML = '';
   if (msgs.length === 0) {
-    emptyMsg.style.display = 'flex';
-    emptyMsg.innerHTML = '<div class="icon">💬</div><p>' +
-      (currentRoom === 'global' ? 'Sala Global — todos ven esto.' : '🔒 Canal privado con Jose.') +
-      '</p>';
+    const e = document.createElement('div');
+    e.className = 'empty-state';
+    e.innerHTML = '<div class="icon">💬</div><p>' +
+      (currentRoom === 'global' ? 'Sala Global — todos ven esto.' : '🔒 Canal privado con Jose.') + '</p>';
+    msgContainer.appendChild(e);
     return;
   }
-  emptyMsg.style.display = 'none';
   msgs.forEach(m => {
     const div = document.createElement('div');
     div.className = 'msg ' + (m.user === myNick ? 'mine' : 'other');
@@ -238,15 +234,16 @@ function renderMsgs() {
 
 function handleMsg(p) {
   if (p.type === 'message') {
-    const msg = { user: p.user, text: p.text, time: p.time || time(), priv: p.priv || false };
-    if (p.priv) {
+    const isPriv = p._topic === CH_JOSE;
+    const msg = { user: p.user, text: p.text, time: p.time || time(), priv: isPriv };
+    if (isPriv) {
       joseMsgs.push(msg);
       if (currentRoom !== 'jose') { joseUnread++; joseBadge.textContent = joseUnread; joseBadge.classList.add('show'); }
     } else {
       globalMsgs.push(msg);
       if (currentRoom !== 'global') { globalUnread++; globalBadge.textContent = globalUnread; globalBadge.classList.add('show'); }
     }
-    if ((p.priv && currentRoom === 'jose') || (!p.priv && currentRoom === 'global')) renderMsgs();
+    if ((isPriv && currentRoom === 'jose') || (!isPriv && currentRoom === 'global')) renderMsgs();
   } else if (p.type === 'join' && p.user !== myNick) {
     const sys = { user: '', text: '▸ ' + p.user + ' se conectó', time: time(), priv: false };
     globalMsgs.push(sys);
@@ -259,21 +256,25 @@ function handleMsg(p) {
   }
 }
 
-function connect(adminMode) {
+function connect() {
   if (ws) try { ws.close(); } catch {}
   ws = new WebSocket(WS_URL);
   ws.onopen = () => {
     connected = true;
     statusText.textContent = 'LIVE';
-    const ch = adminMode ? CH_JOSE : CH_GLOBAL;
     ws.send(JSON.stringify({ topic: CH_GLOBAL, event: 'phx_join', payload: { config: { broadcast: { ack: false, self: true } } }, ref: '1' }));
-    ws.send(JSON.stringify({ topic: ch, event: 'phx_join', payload: { config: { broadcast: { ack: false, self: true } } }, ref: '2' }));
+    ws.send(JSON.stringify({ topic: CH_JOSE, event: 'phx_join', payload: { config: { broadcast: { ack: false, self: true } } }, ref: '2' }));
     ws.send(JSON.stringify({ topic: CH_GLOBAL, event: 'broadcast', payload: { event: 'message', payload: { type: 'join', user: myNick } }, ref: '3' }));
   };
   ws.onmessage = (e) => {
     try {
       const d = JSON.parse(e.data);
-      if (d.event === 'broadcast' && d.payload?.payload) handleMsg(d.payload.payload);
+      if (d.event === 'broadcast' && d.payload?.payload) {
+        const topic = d.topic;
+        const p = d.payload.payload;
+        p._topic = topic;
+        handleMsg(p);
+      }
     } catch {}
   };
   ws.onclose = () => { connected = false; statusText.textContent = 'OFF'; setTimeout(() => connect(adminMode), 3000); };
@@ -283,10 +284,9 @@ function connect(adminMode) {
 function sendMsg(text, priv) {
   if (!ws || !connected) return;
   const ch = priv ? CH_JOSE : CH_GLOBAL;
-  const p = { type: 'message', user: myNick, text, time: time(), priv };
+  const p = { type: 'message', user: myNick, text, time: time() };
   ws.send(JSON.stringify({ topic: ch, event: 'broadcast', payload: { event: 'message', payload: p }, ref: Date.now().toString() }));
-  // mostrar local
-  if (priv) { joseMsgs.push(p); if (currentRoom === 'jose') renderMsgs(); }
+  if (priv) { joseMsgs.push({ ...p, priv: true }); if (currentRoom === 'jose') renderMsgs(); }
   else { globalMsgs.push(p); if (currentRoom === 'global') renderMsgs(); }
 }
 
@@ -348,7 +348,7 @@ enterBtn.addEventListener('click', () => {
   loginScreen.style.display = 'none';
   chatUI.style.display = 'flex';
   addSysMsg('▸ Bienvenido a chatJOSE33, ' + nick + (adminMode ? ' [ADMIN]' : ''));
-  connect(adminMode);
+  connect();
 });
 nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') enterBtn.click(); });
 
