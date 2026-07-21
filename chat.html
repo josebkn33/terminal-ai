@@ -131,6 +131,22 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 .msg .youtube-embed iframe { width: 100%; max-width: 280px; height: 158px; border: 0; display: block; }
 .msg .youtube-link { display: inline-block; margin-top: 0.2rem; font-size: 0.6rem; color: var(--text-dim); text-decoration: underline; word-break: break-all; }
 
+/* MUSIC PLAYER */
+.music-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font); font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.25rem 0.4rem; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.music-btn:hover { border-color: var(--text-dim); color: var(--text); }
+.music-btn.playing { border-color: var(--text); color: var(--text); animation: pulse 1.5s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 8px rgba(0,255,65,0.3); } }
+#musicPanel { display: none; position: absolute; bottom: var(--input-h); left: 0; right: 0; background: rgba(0,0,0,0.95); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0.7rem; z-index: 8; flex-direction: column; gap: 0.5rem; }
+#musicPanel.show { display: flex; }
+#musicPanel .music-input-wrap { display: flex; gap: 0.35rem; }
+#musicPanel input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.4rem 0.6rem; font-family: var(--font); font-size: 0.65rem; color: var(--text); outline: none; }
+#musicPanel input:focus { border-color: var(--text-dim); }
+#musicPanel .music-play-btn { background: var(--text); color: #000; border: none; border-radius: var(--radius); padding: 0.4rem 0.8rem; font-family: var(--font); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; font-weight: 600; }
+#musicPanel .music-now { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.5px; }
+#musicPanel .music-now .song-title { color: var(--text); }
+#musicPanel .music-close { position: absolute; top: 0.3rem; right: 0.5rem; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; }
+.music-embed-player { width: 100%; max-height: 120px; border: 0; border-radius: var(--radius); }
+
 /* ADMIN PANEL */
 #adminPanel { display: none; position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(0,0,0,0.95); border-left: 1px solid var(--border); z-index: 10; flex-direction: column; }
 #adminPanel.show { display: flex; }
@@ -202,11 +218,22 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
       <button class="room-tab active" data-room="global">🌐 Global <span class="badge" id="globalBadge"></span></button>
       <button class="room-tab" data-room="jose" id="joseTab">🔒 Jose <span class="badge" id="joseBadge"></span></button>
     </div>
+    <button class="music-btn" id="musicBtn">🎵</button>
     <button class="admin-btn" id="adminBtn">⚙️ Admin</button>
     <div class="status-badge">
       <span class="dot"></span>
       <span id="statusText">WAIT</span>
     </div>
+  </div>
+
+  <div id="musicPanel">
+    <button class="music-close" id="musicClose">✕</button>
+    <div class="music-input-wrap">
+      <input type="text" id="musicInput" placeholder="pegá URL de YouTube..." />
+      <button class="music-play-btn" id="musicPlayBtn">▶ PLAY</button>
+    </div>
+    <div class="music-now">🎵 Ahora: <span class="song-title" id="musicNow">Ninguna</span></div>
+    <div id="musicEmbedWrap"></div>
   </div>
 
   <div class="msgs-wrap">
@@ -316,6 +343,7 @@ const joseTab = l('joseTab'), adminHint = l('adminHint'), loginSub = l('loginSub
 const adminPassField = l('adminPassField'), adminPass = l('adminPass');
 const adminBtn = l('adminBtn'), adminPanel = l('adminPanel'), adminBody = l('adminBody'), closeAdmin = l('closeAdmin');
 const overlay = l('overlay'), bannedOverlay = l('bannedOverlay'), banReason = l('banReason');
+const musicBtn = l('musicBtn'), musicPanel = l('musicPanel'), musicInput = l('musicInput'), musicPlayBtn = l('musicPlayBtn'), musicNow = l('musicNow'), musicEmbedWrap = l('musicEmbedWrap'), musicClose = l('musicClose');
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function time() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
@@ -623,6 +651,37 @@ function addSysMsg(text) {
   globalMsgs.push({ user: '', text, time: time(), system: true, priv: false });
   if (currentRoom === 'global') renderMsgs();
   saveMessages();
+}
+
+// MUSIC PLAYER
+let currentMusicVid = '';
+musicBtn.addEventListener('click', () => { musicPanel.classList.toggle('show'); if (musicPanel.classList.contains('show')) musicInput.focus(); });
+musicClose.addEventListener('click', () => musicPanel.classList.remove('show'));
+musicPlayBtn.addEventListener('click', playMusic);
+musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') playMusic(); });
+function playMusic() {
+  const url = musicInput.value.trim();
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (!match) { alert('URL de YouTube inválida'); return; }
+  const vid = match[1];
+  currentMusicVid = vid;
+  musicNow.textContent = 'Cargando...';
+  musicEmbedWrap.innerHTML = '<iframe class="music-embed-player" src="https://www.youtube.com/embed/' + vid + '?autoplay=1&rel=0" allow="autoplay" allowfullscreen></iframe>';
+  musicBtn.classList.add('playing');
+  // Fetch title via oEmbed
+  fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + vid + '&format=json')
+    .then(r => r.json())
+    .then(d => { musicNow.textContent = d.title; })
+    .catch(() => { musicNow.textContent = 'YouTube Video'; });
+  // Broadcast to chat
+  const priv = currentRoom === 'jose';
+  const ch = priv ? CH_JOSE : CH_GLOBAL;
+  broadcast(ch, 'message', { text: '🎵 ' + url, priv });
+  const msg = { user: myNick, text: '🎵 ' + url, time: time(), priv };
+  if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
+  else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
+  saveMessages();
+  musicPanel.classList.remove('show');
 }
 
 // ADMIN PANEL
