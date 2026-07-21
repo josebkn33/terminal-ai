@@ -159,7 +159,8 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 
 .floating-player { position: fixed; bottom: 70px; right: 20px; width: 340px; z-index: 50; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 0 30px rgba(0,0,0,0.8); display: none; }
 .floating-player.show { display: block; }
-.floating-player iframe { width: 100%; height: 180px; border: 0; display: block; }
+.floating-player #fpContainer { width: 100%; height: 180px; background: #000; position: relative; }
+.floating-player #fpContainer iframe, .floating-player #fpContainer .ytp-embed { width: 100%; height: 100%; border: 0; }
 .floating-player .fp-bar { background: rgba(0,0,0,0.95); padding: 0.35rem 0.6rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.55rem; }
 .floating-player .fp-bar .fp-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px; }
 .floating-player .fp-bar .fp-close { background: none; border: none; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; padding: 0.1rem; }
@@ -260,7 +261,7 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
       <span class="fp-title" id="fpTitle">Sin música</span>
       <button class="fp-close" id="fpClose">✕</button>
     </div>
-    <div id="fpEmbed"></div>
+    <div id="fpContainer"></div>
   </div>
 
   <div class="msgs-wrap">
@@ -372,7 +373,7 @@ const adminBtn = l('adminBtn'), adminPanel = l('adminPanel'), adminBody = l('adm
 const overlay = l('overlay'), bannedOverlay = l('bannedOverlay'), banReason = l('banReason');
 const musicBtn = l('musicBtn'), musicPanel = l('musicPanel'), musicInput = l('musicInput'), musicPlayBtn = l('musicPlayBtn'), musicNow = l('musicNow'), musicClose = l('musicClose');
 const musicResults = l('musicResults'), musicLoading = l('musicLoading');
-const floatingPlayer = l('floatingPlayer'), fpTitle = l('fpTitle'), fpEmbed = l('fpEmbed'), fpClose = l('fpClose');
+const floatingPlayer = l('floatingPlayer'), fpTitle = l('fpTitle'), fpContainer = l('fpContainer'), fpClose = l('fpClose');
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function time() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
@@ -682,18 +683,54 @@ function addSysMsg(text) {
   saveMessages();
 }
 
-// MUSIC PLAYER — autocomplete + búsqueda embed
-let currentVid = '', suggestTimer;
-musicBtn.addEventListener('click', () => { musicPanel.classList.toggle('show'); if (musicPanel.classList.contains('show')) musicInput.focus(); });
+// MUSIC PLAYER — YouTube IFrame API + Google Suggest
+let ytPlayer = null, ytPlayerReady = false, suggestTimer;
+
+// Cargar YouTube IFrame API
+let ytQueue = [];
+(function() {
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+window.onYouTubeIframeAPIReady = function() {
+  ytPlayerReady = true;
+  fpContainer.innerHTML = '<div id="ytPlayerDiv"></div>';
+  ytPlayer = new YT.Player('ytPlayerDiv', {
+    height: 180, width: 340,
+    playerVars: { rel: 0, modestbranding: 1 },
+    events: {
+      onReady: () => { ytQueue.forEach(f => f()); ytQueue = []; },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.PLAYING) {
+          try { const d = ytPlayer.getVideoData(); if (d && d.title) { fpTitle.textContent = d.title; musicNow.textContent = d.title; } } catch {}
+        }
+      }
+    }
+  });
+};
+
+function initPlayer(cb) {
+  if (ytPlayer && ytPlayer.loadVideoById) { if (cb) cb(); return; }
+  if (cb) ytQueue.push(cb);
+}
+
+musicBtn.addEventListener('click', () => {
+  musicPanel.classList.toggle('show');
+  if (musicPanel.classList.contains('show')) musicInput.focus();
+});
 musicClose.addEventListener('click', () => musicPanel.classList.remove('show'));
 musicPlayBtn.addEventListener('click', () => handleMusicInput());
-musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { handleMusicInput(); } });
-fpClose.addEventListener('click', () => { floatingPlayer.classList.remove('show'); musicBtn.classList.remove('playing'); });
+musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleMusicInput(); });
+fpClose.addEventListener('click', () => {
+  floatingPlayer.classList.remove('show');
+  musicBtn.classList.remove('playing');
+  if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+});
 
 function handleMusicInput() {
   const val = musicInput.value.trim();
   if (!val) return;
-  // Detectar URL de YouTube directa
   const ytMatch = val.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) {
     fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + ytMatch[1] + '&format=json')
@@ -702,24 +739,24 @@ function handleMusicInput() {
       .catch(() => playVideo(ytMatch[1], 'YouTube Video'));
     return;
   }
-  searchMusic(val);
+  playSearch(val);
 }
 
-// Autocomplete mientras escribe
 musicInput.addEventListener('input', () => {
   clearTimeout(suggestTimer);
   const q = musicInput.value.trim();
   if (q.length < 2) { musicResults.classList.remove('show'); return; }
-  suggestTimer = setTimeout(() => fetchSuggestions(q), 300);
+  suggestTimer = setTimeout(() => fetchSuggestions(q), 200);
 });
 
 async function fetchSuggestions(q) {
   try {
     const r = await fetch('https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=' + encodeURIComponent(q));
     const text = await r.text();
-    const match = text.match(/\["([^"]+)"[^\]]*\]/);
-    if (!match) return;
-    const data = JSON.parse('[' + text.slice(text.indexOf('['), text.lastIndexOf(']') + 1) + ']');
+    const start = text.indexOf('[');
+    const end = text.lastIndexOf(']');
+    if (start === -1 || end === -1) return;
+    const data = JSON.parse(text.slice(start, end + 1));
     const suggestions = data[1] || [];
     if (suggestions.length === 0) return;
     musicResults.innerHTML = '';
@@ -728,63 +765,42 @@ async function fetchSuggestions(q) {
       const item = document.createElement('div');
       item.className = 'mr-item';
       item.innerHTML = '<span class="mr-icon">🎵</span><span class="mr-title">' + esc(title) + '</span><span class="mr-dur">↗</span>';
-      item.addEventListener('click', () => { musicInput.value = title; searchMusic(title); });
+      item.addEventListener('click', () => { musicInput.value = title; playSearch(title); });
       musicResults.appendChild(item);
     });
     musicResults.classList.add('show');
   } catch {}
 }
 
-function searchMusic(q) {
+function playSearch(q) {
   if (!q || q.length < 2) return;
   musicResults.classList.remove('show');
-  musicLoading.classList.add('show');
-  // Intentar API de Invidious primero
-  fetch('https://yt.artemislena.eu/api/v1/search?q=' + encodeURIComponent(q) + '&fields=videoId,title,lengthSeconds,type')
-    .then(r => r.json())
-    .then(d => {
-      musicLoading.classList.remove('show');
-      const vids = (d || []).filter(v => v.type === 'video' && v.videoId).slice(0, 5);
-      if (vids.length === 0) throw new Error('no results');
-      musicResults.innerHTML = '';
-      vids.forEach(v => {
-        const item = document.createElement('div');
-        item.className = 'mr-item';
-        const dur = v.lengthSeconds ? Math.floor(v.lengthSeconds/60) + ':' + String(v.lengthSeconds%60).padStart(2,'0') : '';
-        item.innerHTML = '<span class="mr-icon">▶️</span><span class="mr-title">' + esc(v.title || '') + '</span><span class="mr-dur">' + dur + '</span>';
-        item.addEventListener('click', () => playVideo(v.videoId, v.title || q));
-        musicResults.appendChild(item);
-      });
-      musicResults.classList.add('show');
-    })
-    .catch(() => {
-      musicLoading.classList.remove('show');
-      // Fallback: embed search directo
-      const embedUrl = 'https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(q) + '&autoplay=1';
-      fpEmbed.innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
-      fpTitle.textContent = '🔍 ' + q;
-      floatingPlayer.classList.add('show');
-      musicBtn.classList.add('playing');
-      musicNow.textContent = q;
-      musicPanel.classList.remove('show');
-      const priv = currentRoom === 'jose';
-      const ch = priv ? CH_JOSE : CH_GLOBAL;
-      broadcast(ch, 'message', { text: '🎵 Buscando: ' + q, priv });
-      const msg = { user: myNick, text: '🎵 ' + q, time: time(), priv };
-      if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
-      else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
-      saveMessages();
-    });
+  musicPanel.classList.remove('show');
+  floatingPlayer.classList.add('show');
+  musicBtn.classList.add('playing');
+  fpTitle.textContent = '🔍 ' + q;
+  musicNow.textContent = q;
+  initPlayer(() => {
+    try { ytPlayer.loadPlaylist({ list: q, listType: 'search', index: 0, startSeconds: 0 }); } catch {}
+  });
+  const priv = currentRoom === 'jose';
+  const ch = priv ? CH_JOSE : CH_GLOBAL;
+  broadcast(ch, 'message', { text: '🎵 ' + q, priv });
+  const msg = { user: myNick, text: '🎵 ' + q, time: time(), priv };
+  if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
+  else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
+  saveMessages();
 }
 
 function playVideo(vid, title) {
-  currentVid = vid;
-  fpEmbed.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=1&rel=0" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
   fpTitle.textContent = title;
+  musicNow.textContent = title;
   floatingPlayer.classList.add('show');
   musicBtn.classList.add('playing');
-  musicNow.textContent = title;
   musicPanel.classList.remove('show');
+  initPlayer(() => {
+    try { ytPlayer.loadVideoById(vid); } catch {}
+  });
   const priv = currentRoom === 'jose';
   const ch = priv ? CH_JOSE : CH_GLOBAL;
   broadcast(ch, 'message', { text: '🎵 ' + title, priv });
