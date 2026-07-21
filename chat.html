@@ -695,11 +695,11 @@ async function searchMusic() {
   musicResults.innerHTML = '';
   musicResults.classList.remove('show');
   try {
-    const r = await fetch('https://inv.nadeko.net/api/v1/search?q=' + encodeURIComponent(q));
+    const r = await fetch('https://yt.artemislena.eu/api/v1/search?q=' + encodeURIComponent(q));
     const d = await r.json();
     musicLoading.classList.remove('show');
-    const vids = d.filter(v => v.type === 'video' && v.videoId).slice(0, 6);
-    if (vids.length === 0) { musicResults.innerHTML = '<div style="font-size:0.55rem;color:var(--text-muted);padding:0.3rem;">Sin resultados</div>'; musicResults.classList.add('show'); return; }
+    const vids = (d || []).filter(v => v.type === 'video' && v.videoId).slice(0, 6);
+    if (vids.length === 0) throw new Error('sin resultados');
     musicResults.innerHTML = '';
     vids.forEach(v => {
       const item = document.createElement('div');
@@ -713,8 +713,21 @@ async function searchMusic() {
     musicResults.classList.add('show');
   } catch (e) {
     musicLoading.classList.remove('show');
-    musicResults.innerHTML = '<div style="font-size:0.55rem;color:var(--red);padding:0.3rem;">Error de búsqueda</div>';
-    musicResults.classList.add('show');
+    // Fallback: usar embed search si falla la API
+    const embedUrl = 'https://www.youtube.com/embed?listType=search&list=' + encodeURIComponent(q) + '&autoplay=1';
+    fpEmbed.innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
+    fpTitle.textContent = '🔍 ' + q;
+    floatingPlayer.classList.add('show');
+    musicBtn.classList.add('playing');
+    musicNow.textContent = q;
+    musicPanel.classList.remove('show');
+    const priv = currentRoom === 'jose';
+    const ch = priv ? CH_JOSE : CH_GLOBAL;
+    broadcast(ch, 'message', { text: '🎵 Buscando: ' + q, priv });
+    const msg = { user: myNick, text: '🎵 ' + q, time: time(), priv };
+    if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
+    else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
+    saveMessages();
   }
 }
 
