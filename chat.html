@@ -377,7 +377,7 @@ let typingTimer,gUnread=0,jUnread=0;
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function time(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
 async function sha256(s){const e=new TextEncoder();const d=await crypto.subtle.digest('SHA-256',e.encode(s));return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-const ADMIN_HASH='106f79496f3904835b3ac6e408b1ca8bf0ecc01bd89726c0e4d4b869b78b4b20';
+const ADMIN_HASH='161b2f92eebceb653662f7d625a8ade99bf1cc538ad822a31acd1e76e41f03ef';
 
 function renderMsgs(){
   const msgs=currentRoom==='global'?gMsgs:jMsgs;
