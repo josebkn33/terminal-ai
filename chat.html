@@ -86,6 +86,7 @@ canvas#matrix{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;point
 .chat-header .header-btn{background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--font);font-size:0.55rem;font-weight:500;padding:0.3rem 0.45rem;border-radius:6px;cursor:pointer;transition:all 0.2s;flex-shrink:0;letter-spacing:0.5px}
 .chat-header .header-btn:hover{border-color:var(--accent);color:var(--text);background:var(--surface-3)}
 .chat-header .header-btn.playing{background:rgba(0,230,118,0.1);border-color:var(--green);color:var(--green);animation:pulse 1.5s infinite}
+.chat-header .header-btn.bot-on{background:rgba(108,92,231,0.15);border-color:var(--accent);color:var(--accent);animation:pulse 1.5s infinite}
 @keyframes pulse{50%{box-shadow:0 0 12px rgba(0,230,118,0.15)}}
 .chat-header .status-badge{font-size:0.5rem;color:var(--text-muted);display:flex;align-items:center;gap:0.25rem;flex-shrink:0}
 .chat-header .status-badge .dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 1.2s infinite}
@@ -239,6 +240,7 @@ canvas#matrix{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;point
       <button class="room-tab active" data-room="global">🌐 Global <span class="badge" id="globalBadge"></span></button>
       <button class="room-tab" data-room="jose" id="joseTab">🔒 Jose <span class="badge" id="joseBadge"></span></button>
     </div>
+    <button class="header-btn" id="botBtn">🤖</button>
     <button class="header-btn" id="musicBtn">🎵</button>
     <button class="header-btn" id="adminBtn">⚙️</button>
     <div class="status-badge"><span class="dot"></span><span id="statusText">WAIT</span></div>
@@ -340,6 +342,7 @@ const joseTab=l('joseTab'),adminHint=l('adminHint'),loginSub=l('loginSub');
 const adminPassField=l('adminPassField'),adminPass=l('adminPass');
 const adminBtn=l('adminBtn'),adminPanel=l('adminPanel'),adminBody=l('adminBody'),closeAdmin=l('closeAdmin');
 const overlay=l('overlay'),bannedOverlay=l('bannedOverlay'),banReason=l('banReason');
+const botBtn=l('botBtn');let botActive=false;
 const musicBtn=l('musicBtn'),musicPanel=l('musicPanel'),musicInput=l('musicInput'),musicPlayBtn=l('musicPlayBtn'),musicNow=l('musicNow');
 const musicResults=l('musicResults');
 const floatingPlayer=l('floatingPlayer'),fpTitle=l('fpTitle'),fpAudio=l('fpAudio'),fpClose=l('fpClose');
@@ -424,6 +427,10 @@ function handleMsg(p){
   }else if(p.type==='unban'){if(isAdmin){delete bannedNicks[p.target];updateAdmin()}
   }else if(p.type==='typing'&&p.user!==myNick){typingName.textContent=p.user;typingIndicator.classList.add('show');clearTimeout(typingTimer);typingTimer=setTimeout(()=>typingIndicator.classList.remove('show'),2000)
   }else if(p.type==='userlist_sync'&&Array.isArray(p.users)){p.users.forEach(u=>{connUsers[u]=true});updateAdmin()}
+  if(botActive&&p.type==='message'&&p.user!==AI_USER){
+    const t=p.text||'';
+    if(/oracle/i.test(t))callAI(t.replace(/oracle/gi,'').replace(AI_USER,'').trim()||t);
+  }
 }
 
 function showBanned(r){banReason.textContent=r?'Razón: '+r:'';bannedOverlay.classList.add('show')}
@@ -436,6 +443,7 @@ function connect(){
     ws.send(JSON.stringify({topic:CH_G,event:'phx_join',payload:{config:{broadcast:{ack:false,self:true}}},ref:'1'}));
     ws.send(JSON.stringify({topic:CH_J,event:'phx_join',payload:{config:{broadcast:{ack:false,self:true}}},ref:'2'}));
     ws.send(JSON.stringify({topic:CH_G,event:'broadcast',payload:{event:'message',payload:{type:'join',user:myNick,avatar:selectedAvatar}},ref:'3'}));
+    if(botActive)ws.send(JSON.stringify({topic:CH_G,event:'broadcast',payload:{event:'message',payload:{type:'join',user:AI_USER,avatar:AI_AVATAR}},ref:'4'}));
     setTimeout(()=>broadcast(CH_G,'userlist_sync',{users:Object.keys(connUsers)}),500);
   };
   ws.onmessage=e=>{
@@ -630,6 +638,19 @@ function playAudius(t){
   saveMsgs();
 }
 
+// BOT TOGGLE
+botBtn.addEventListener('click',()=>{
+  botActive=!botActive;botBtn.classList.toggle('bot-on');
+  if(botActive){
+    broadcast(CH_G,'join',{user:AI_USER,avatar:AI_AVATAR});
+    gMsgs.push({user:'',text:'▸ '+AI_USER+' se conectó',time:time(),system:true});
+  }else{
+    broadcast(CH_G,'leave',{user:AI_USER,avatar:AI_AVATAR});
+    gMsgs.push({user:'',text:'▸ '+AI_USER+' se desconectó',time:time(),system:true});
+  }
+  if(currentRoom==='global')renderMsgs();saveMsgs();
+});
+
 // ADMIN PANEL
 adminBtn.addEventListener('click',()=>{adminPanel.classList.add('show');overlay.classList.add('show');updateAdmin()});
 closeAdmin.addEventListener('click',()=>{adminPanel.classList.remove('show');overlay.classList.remove('show')});
@@ -647,7 +668,7 @@ function updateAdmin(){
   adminBody.querySelectorAll('.unban-btn').forEach(b=>{b.addEventListener('click',()=>{const t=b.dataset.nick;broadcast(CH_G,'unban',{target:t});delete bannedNicks[t];updateAdmin()})});
 }
 
-window.addEventListener('beforeunload',()=>{if(ws&&connected)broadcast(CH_G,'leave',{})});
+window.addEventListener('beforeunload',()=>{if(ws&&connected){broadcast(CH_G,'leave',{});if(botActive)broadcast(CH_G,'leave',{user:AI_USER,avatar:AI_AVATAR})}});
 
 // mobile viewport
 if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>{const d=window.innerHeight-window.visualViewport.height;chatUI.style.height=d>100?window.visualViewport.height+'px':'100dvh'});
