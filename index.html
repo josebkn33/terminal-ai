@@ -3,24 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>IA en la Terminal — Aprende a usar AI desde la línea de comandos</title>
+<title>OpenCode — AI para Bug Bounty y Auditoría desde la Terminal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #0a0a0f;
-  --surface: #12121a;
-  --surface-2: #1a1a2e;
-  --border: #1e1e32;
-  --text: #e4e4ed;
-  --text-muted: #8888a0;
-  --accent: #6c5ce7;
-  --accent-glow: rgba(108, 92, 231, 0.25);
-  --green: #00d68f;
+  --bg: #050508;
+  --surface: #0c0c14;
+  --surface-2: #14141f;
+  --surface-3: #1c1c2a;
+  --border: #1f1f30;
+  --text: #e8e8f0;
+  --text-muted: #78789a;
+  --text-dim: #484860;
+  --accent: #00d68f;
+  --accent2: #6c5ce7;
+  --red: #ff4757;
   --orange: #ff9f43;
   --pink: #fd79a8;
+  --yellow: #ffd93d;
   --radius: 12px;
+  --radius-sm: 8px;
 }
 html { scroll-behavior: smooth; }
 body {
@@ -30,30 +34,37 @@ body {
   line-height: 1.6;
   min-height: 100vh;
 }
-::selection { background: var(--accent); color: #fff; }
+::selection { background: var(--accent); color: #000; }
 
 nav {
   position: fixed; top: 0; left: 0; right: 0;
   z-index: 100;
-  padding: 1rem 2rem;
-  background: rgba(10, 10, 15, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  padding: 0.9rem 2rem;
+  background: rgba(5,5,8,0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
 }
 nav .logo {
-  font-weight: 700; font-size: 1.2rem;
-  display: flex; align-items: center; gap: 0.5rem;
+  font-weight: 800; font-size: 1.15rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+nav .logo .logo-icon {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; color: #000; font-weight: 800;
 }
 nav .logo span { color: var(--accent); }
-nav .logo code { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--green); background: var(--surface-2); padding: 0.15rem 0.5rem; border-radius: 6px; }
 nav .links { display: flex; gap: 2rem; align-items: center; }
-nav .links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+nav .links a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; letter-spacing: 0.01em; }
 nav .links a:hover { color: var(--text); }
 
 .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
 
+/* Hero */
 .hero {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
@@ -65,57 +76,90 @@ nav .links a:hover { color: var(--text); }
 .hero::before {
   content: '';
   position: absolute;
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,214,143,0.08) 0%, transparent 60%);
+  top: 40%; left: 30%;
   pointer-events: none;
 }
-.hero-content { position: relative; max-width: 800px; }
+.hero::after {
+  content: '';
+  position: absolute;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(108,92,231,0.06) 0%, transparent 60%);
+  bottom: 10%; right: 10%;
+  pointer-events: none;
+}
+.hero-content { position: relative; max-width: 820px; }
 .hero .badge {
   display: inline-flex; align-items: center; gap: 0.5rem;
   background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 100px; padding: 0.4rem 1rem 0.4rem 0.5rem;
-  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2rem;
+  border-radius: 100px; padding: 0.35rem 1rem 0.35rem 0.5rem;
+  font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
 }
-.hero .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.hero .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.hero .badge .tag { background: var(--accent); color: #000; padding: 0.1rem 0.5rem; border-radius: 100px; font-weight: 700; margin-left: 0.3rem; }
 .hero h1 {
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  font-weight: 900;
+  line-height: 1.05;
   margin-bottom: 1.5rem;
   letter-spacing: -0.03em;
 }
 .hero h1 .gradient {
-  background: linear-gradient(135deg, var(--accent), var(--pink));
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero h1 .highlight {
+  background: linear-gradient(135deg, var(--orange), var(--red));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .hero p {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   color: var(--text-muted);
-  max-width: 600px;
+  max-width: 620px;
   margin: 0 auto 2.5rem;
+  line-height: 1.7;
 }
+
 .hero .terminal-shot {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   text-align: left;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  line-height: 1.8;
+  font-size: 0.8rem;
+  line-height: 1.9;
   margin: 0 auto;
-  max-width: 650px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  max-width: 680px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+  position: relative;
 }
-.hero .terminal-shot .prompt { color: var(--green); }
+.hero .terminal-shot .bar {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.hero .terminal-shot .bar .c { width: 10px; height: 10px; border-radius: 50%; }
+.hero .terminal-shot .bar .c1 { background: #ff5f56; }
+.hero .terminal-shot .bar .c2 { background: #ffbd2e; }
+.hero .terminal-shot .bar .c3 { background: #27c93f; }
+.hero .terminal-shot .bar .title { font-size: 0.7rem; color: var(--text-dim); margin-left: 0.5rem; }
+.hero .terminal-shot .prompt { color: var(--accent); }
+.hero .terminal-shot .prompt2 { color: var(--accent2); }
 .hero .terminal-shot .cmd { color: var(--text); }
 .hero .terminal-shot .output { color: var(--text-muted); }
-.hero .terminal-shot .cursor { display: inline-block; width: 8px; height: 1.2em; background: var(--accent); animation: blink 1s steps(1) infinite; vertical-align: text-bottom; margin-left: 2px; }
+.hero .terminal-shot .output-green { color: var(--accent); }
+.hero .terminal-shot .output-red { color: var(--red); }
+.hero .terminal-shot .output-dim { color: var(--text-dim); font-size: 0.75rem; }
+.hero .terminal-shot .cursor { display: inline-block; width: 7px; height: 1.1em; background: var(--accent); animation: blink 1s steps(1) infinite; vertical-align: text-bottom; margin-left: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
 
 .hero .cta { margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
@@ -123,122 +167,207 @@ nav .links a:hover { color: var(--text); }
   display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.8rem 2rem;
   border-radius: 100px;
-  font-weight: 600; font-size: 0.95rem;
+  font-weight: 600; font-size: 0.9rem;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.25s;
   cursor: pointer; border: none;
 }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #5a4bd1; transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: #00e89a; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,214,143,0.25); }
 .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--surface-2); transform: translateY(-2px); }
 
-section { padding: 5rem 0; }
+/* Sections */
+section { padding: 6rem 0; }
 .section-title {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
 }
 .section-sub {
   text-align: center;
   color: var(--text-muted);
-  max-width: 600px;
-  margin: 0 auto 3rem;
+  max-width: 550px;
+  margin: 0 auto 3.5rem;
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
-.tools-grid {
+/* Features */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feature-card:hover { border-color: var(--surface-3); transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
+.feature-card:hover::before { opacity: 1; }
+.feature-card .icon { font-size: 1.6rem; margin-bottom: 1rem; display: inline-block; }
+.feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; }
+.feature-card p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.7; }
+.feature-card code {
+  display: inline-block;
+  background: var(--surface-2);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-top: 0.8rem;
+  border: 1px solid var(--border);
+}
+
+/* Steps */
+.steps { max-width: 720px; margin: 0 auto; }
+.step {
+  display: flex; gap: 1.5rem;
+  padding: 1.75rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+.step:hover { border-color: var(--surface-3); }
+.step .num {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.step .content { flex: 1; }
+.step .content h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.35rem; }
+.step .content p { color: var(--text-muted); font-size: 0.88rem; line-height: 1.7; }
+.step .content code {
+  background: var(--surface-2);
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Use Cases */
+.usecases-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
-.tool-card {
+.uc-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
-  transition: all 0.3s;
 }
-.tool-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
-.tool-card .icon { font-size: 2rem; margin-bottom: 1rem; }
-.tool-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
-.tool-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
-.tool-card code {
+.uc-card .tag {
   display: inline-block;
-  background: var(--surface-2);
-  color: var(--green);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
   padding: 0.2rem 0.6rem;
-  border-radius: 6px;
-  margin-top: 0.8rem;
+  border-radius: 4px;
+  margin-bottom: 0.8rem;
 }
-
-.steps {
-  display: flex; flex-direction: column; gap: 0;
-  max-width: 700px; margin: 0 auto;
-}
-.step {
-  display: flex; gap: 1.5rem;
-  padding: 1.5rem 0;
-  position: relative;
-}
-.step:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: 19px; top: 3.5rem; bottom: 0;
-  width: 2px;
-  background: var(--border);
-}
-.step .num {
-  width: 40px; height: 40px;
-  border-radius: 50%;
+.uc-card .tag.bug { background: rgba(255,71,87,0.15); color: var(--red); }
+.uc-card .tag.recon { background: rgba(0,214,143,0.15); color: var(--accent); }
+.uc-card .tag.web { background: rgba(108,92,231,0.15); color: var(--accent2); }
+.uc-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+.uc-card p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; margin-bottom: 1rem; }
+.uc-card code {
+  display: block;
   background: var(--surface-2);
-  border: 2px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 0.9rem;
-  flex-shrink: 0;
   color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  line-height: 1.6;
 }
-.step.active .num { background: var(--accent); border-color: var(--accent); color: #fff; }
-.step h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
-.step p { color: var(--text-muted); font-size: 0.9rem; }
 
+/* Commands */
 .commands-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 0.6rem;
 }
 .cmd-item {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 1.1rem;
   display: flex; align-items: center; gap: 1rem;
 }
 .cmd-item .cmd-code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  color: var(--green);
+  font-size: 0.75rem;
+  color: var(--accent);
   white-space: nowrap;
   flex-shrink: 0;
 }
-.cmd-item .cmd-desc { color: var(--text-muted); font-size: 0.85rem; }
+.cmd-item .cmd-desc { color: var(--text-muted); font-size: 0.82rem; }
 
+/* Stats */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  max-width: 650px;
+  margin: 0 auto;
+}
+.stat {
+  text-align: center;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.stat .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+.stat .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+/* Footer */
 footer {
   text-align: center;
   padding: 3rem 2rem;
   border-top: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-size: 0.82rem;
 }
 footer a { color: var(--accent); text-decoration: none; }
+footer .social { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1rem; }
+footer .social a { color: var(--text-muted); font-size: 0.85rem; }
+footer .social a:hover { color: var(--text); }
 
 @media (max-width: 640px) {
   nav .links { display: none; }
   .hero { padding: 5rem 1rem 3rem; }
   .container { padding: 0 1rem; }
-  .hero .terminal-shot { font-size: 0.7rem; padding: 1rem; }
+  .hero .terminal-shot { font-size: 0.65rem; padding: 1rem; }
+  .hero .terminal-shot .bar .title { display: none; }
 }
 </style>
 </head>
@@ -246,13 +375,14 @@ footer a { color: var(--accent); text-decoration: none; }
 
 <nav>
   <div class="logo">
-    <code>~$</code>
-    <span>Terminal<span>AI</span></span>
+    <div class="logo-icon">OC</div>
+    <span>OpenCode</span>
   </div>
   <div class="links">
-    <a href="#herramientas">Herramientas</a>
-    <a href="#como">Cómo empezar</a>
+    <a href="#features">Features</a>
+    <a href="#uso">Casos de uso</a>
     <a href="#comandos">Comandos</a>
+    <a href="#como">Empezar</a>
   </div>
 </nav>
 
@@ -260,104 +390,136 @@ footer a { color: var(--accent); text-decoration: none; }
   <div class="hero-content">
     <div class="badge">
       <span class="dot"></span>
-      Nueva forma de aprender
+      AI nativa para la terminal
+      <span class="tag">Kali Linux</span>
     </div>
     <h1>
-      Usá inteligencia artificial<br />
-      <span class="gradient">directamente desde la terminal</span>
+      Auditoría de seguridad<br />
+      con <span class="gradient">inteligencia artificial</span><br />
+      desde la <span class="highlight">terminal</span>
     </h1>
     <p>
-      Aprendé a usar herramientas de IA como ChatGPT, Claude, Copilot y más
-      sin salir de la línea de comandos. Rápido, gratis y sin distracciones.
+      OpenCode te permite auditar aplicaciones web, analizar respuestas de Burp Suite,
+      buscar vulnerabilidades y escribir exploits — todo desde tu terminal con el poder de la IA.
     </p>
 
     <div class="terminal-shot">
-      <span class="prompt">$ </span><span class="cmd">ia "explicame cómo funcionan las redes neuronales en 3 líneas"</span><br />
-      <span class="output">Las redes neuronales son modelos inspirados en el cerebro humano.</span><br />
-      <span class="output">Consisten en capas de neuronas artificiales que procesan información</span><br />
-      <span class="output">y aprenden patrones ajustando sus conexiones (pesos) con datos de entrenamiento.</span><br />
-      <span class="prompt">$ </span><span class="cursor"></span>
+      <div class="bar">
+        <span class="c c1"></span>
+        <span class="c c2"></span>
+        <span class="c c3"></span>
+        <span class="title">opencode — Kali Linux</span>
+      </div>
+      <span class="prompt">kali@opencode:~$</span><span class="cmd"> opencode</span><br />
+      <span class="output-dim">                                                                               </span><br />
+      <span class="output"> ██████╗ ██████╗ ███████╗███╗   ██╗ ██████╗ ██████╗ ██████╗ ███████╗</span><br />
+      <span class="output"> ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██╔════╝ ██╔══██╗██╔══██╗██╔════╝</span><br />
+      <span class="output"> ██║   ██║██████╔╝█████╗  ██╔██╗ ██║██║  ███╗██████╔╝██║  ██║█████╗  </span><br />
+      <span class="output"> ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██║   ██║██╔══██╗██║  ██║██╔══╝  </span><br />
+      <span class="output"> ╚██████╔╝██║     ███████╗██║ ╚████║╚██████╔╝██║  ██║██████╔╝███████╗</span><br />
+      <span class="output-dim">                                                                               </span><br />
+      <span class="prompt">kali@opencode:~$</span><span class="cmd"> opencode "analiza este endpoint en busca de IDOR"</span><br />
+      <span class="output-green">✓ Analizando estructura de la API...</span><br />
+      <span class="output-green">✓ Identificando parámetros de usuario...</span><br />
+      <span class="output-red">⚠ Posible IDOR en /api/users/{id} — sin validación de ownership</span><br />
+      <span class="output-green">✓ PoC generado: python3 exploit.py</span><br />
+      <span class="prompt">kali@opencode:~$</span><span class="cursor"></span>
     </div>
 
     <div class="cta">
-      <a href="#herramientas" class="btn btn-primary">Ver herramientas</a>
-      <a href="#como" class="btn btn-secondary">Cómo empezar</a>
+      <a href="#features" class="btn btn-primary">Ver funcionalidades</a>
+      <a href="#como" class="btn btn-secondary">Cómo instalarlo</a>
     </div>
   </div>
 </section>
 
-<section id="herramientas">
+<section id="features">
   <div class="container">
-    <h2 class="section-title">Herramientas disponibles</h2>
-    <p class="section-sub">Usá las mismas IAs que en el navegador, pero más rápido y sin salir de tu terminal.</p>
+    <h2 class="section-title">Hecho para pentesters</h2>
+    <p class="section-sub">OpenCode entiende de hacking. No necesitas prompt engineering — describí el objetivo y la IA hace el resto.</p>
 
-    <div class="tools-grid">
-      <div class="tool-card">
-        <div class="icon">🟢</div>
-        <h3>OpenAI (ChatGPT)</h3>
-        <p>Consultá GPT-4 y GPT-3.5 desde la terminal. Ideal para preguntas, código, traducciones y más.</p>
-        <code>pip install openai</code>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon">🔍</div>
+        <h3>Análisis de endpoints</h3>
+        <p>Pasale una URL o un request de Burp y OpenCode analiza parámetros, cabeceras y posibles vulnerabilidades.</p>
+        <code>opencode "revisa este endpoint: POST /api/login"</code>
       </div>
-      <div class="tool-card">
-        <div class="icon">🟣</div>
-        <h3>Claude (Anthropic)</h3>
-        <p>Accedé a Claude 3 desde tu terminal. Perfecto para análisis de texto, documentación y razonamiento.</p>
-        <code>npm install @anthropic-ai/sdk</code>
+      <div class="feature-card">
+        <div class="icon">🛡️</div>
+        <h3>Detección de vulnerabilidades</h3>
+        <p>SQLi, XSS, IDOR, SSRF, LFI, RCE — detecta patrones de ataque en respuestas HTTP y código fuente.</p>
+        <code>opencode "busca SQLi en esta consulta: ..."</code>
       </div>
-      <div class="tool-card">
-        <div class="icon">🔵</div>
-        <h3>Ollama (Local)</h3>
-        <p>Ejecutá modelos open-source como Llama 3, Mistral y CodeLlama localmente, sin internet.</p>
-        <code>ollama run llama3.2</code>
+      <div class="feature-card">
+        <div class="icon">⚡</div>
+        <h3>Generación de exploits</h3>
+        <p>Crea scripts de prueba de concepto (PoC) en Python, Bash o JavaScript a partir de una descripción.</p>
+        <code>opencode "crea un script que brute-forcee el login"</code>
       </div>
-      <div class="tool-card">
-        <div class="icon">🟠</div>
-        <h3>GitHub Copilot CLI</h3>
-        <p>Traducí lenguaje natural a comandos de terminal. Escribí qué querés hacer y Copilot lo ejecuta.</p>
-        <code>gh copilot suggest</code>
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>Análisis de Burp Suite</h3>
+        <p>Copiá requests desde Burp y pegalos en OpenCode para obtener análisis detallados al instante.</p>
+        <code>opencode "analiza este request de Burp: ..."</code>
       </div>
-      <div class="tool-card">
-        <div class="icon">⚪</div>
-        <h3>Groq</h3>
-        <p>IAs ultrarrápidas con inferencia en hardware dedicado. Ideal para respuestas en tiempo real.</p>
-        <code>pip install groq</code>
+      <div class="feature-card">
+        <div class="icon">🔬</div>
+        <h3>Reconocimiento</h3>
+        <p>Escaneo de subdominios, enumeración de endpoints, análisis de JS, detección de tecnologías.</p>
+        <code>opencode "haz recon completo de ejemplo.com"</code>
       </div>
-      <div class="tool-card">
-        <div class="icon">🟤</div>
-        <h3>ShellGPT</h3>
-        <p>Wrapper que conecta con múltiples IAs desde la terminal. Instalación única, uso inmediato.</p>
-        <code>pip install shell-gpt</code>
+      <div class="feature-card">
+        <div class="icon">📝</div>
+        <h3>Reportes automáticos</h3>
+        <p>Genera reportes de vulnerabilidades listos para bug bounty con descripción, impacto y PoC.</p>
+        <code>opencode "genera reporte para el hallazgo anterior"</code>
       </div>
     </div>
   </div>
 </section>
 
-<section id="como" style="background: var(--surface);">
+<section id="uso" style="background: var(--surface);">
   <div class="container">
-    <h2 class="section-title">Cómo empezar en 3 pasos</h2>
-    <p class="section-sub">Sin cuentas complicadas. Sin burocracia. Solo terminal.</p>
+    <h2 class="section-title">Casos de uso reales</h2>
+    <p class="section-sub">Así se usa OpenCode en auditorías reales desde Kali Linux.</p>
 
-    <div class="steps">
-      <div class="step active">
-        <div class="num">1</div>
-        <div>
-          <h3>Elegí tu herramienta</h3>
-          <p>Decidí si querés usar la nube (ChatGPT, Claude) o algo local (Ollama). Para empezar, Ollama es la opción más simple porque no necesita API keys.</p>
-        </div>
+    <div class="usecases-grid">
+      <div class="uc-card">
+        <span class="tag bug">Bug Bounty</span>
+        <h3>IDOR en API REST</h3>
+        <p>Analizá una respuesta JSON para detectar falta de autorización por usuario.</p>
+        <code>$ opencode "analiza esta API, busca IDOR:\nGET /api/orders/1001\nResponse: {\"id\":1001,\"user_id\":5,\"total\":\"$500\"}"</code>
       </div>
-      <div class="step">
-        <div class="num">2</div>
-        <div>
-          <h3>Instalá el cliente</h3>
-          <p>Cada herramienta tiene un comando de instalación simple. Por ejemplo: <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">brew install ollama</code> o <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">pip install shell-gpt</code></p>
-        </div>
+      <div class="uc-card">
+        <span class="tag recon">Recon</span>
+        <h3>Enumeración de subdominios</h3>
+        <p>Escaneá subdominios, technologies y endpoints ocultos de un objetivo.</p>
+        <code>$ opencode "haz recon completo de empresa.com.\nUsa subfinder, httpx y nuclei"</code>
       </div>
-      <div class="step">
-        <div class="num">3</div>
-        <div>
-          <h3>Empezá a preguntar</h3>
-          <p>Ya está. Escribí tu primer prompt en la terminal. <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">sgpt "¿qué es un blockchain en términos simples?"</code></p>
-        </div>
+      <div class="uc-card">
+        <span class="tag web">Web</span>
+        <h3>Análisis de JS</h3>
+        <p>Buscá endpoints, API keys y vulnerabilidades en archivos JavaScript.</p>
+        <code>$ opencode "analiza este JS chunk en\nbusca de endpoints y secretos:\nhttps://target.com/_next/static/..."</code>
+      </div>
+      <div class="uc-card">
+        <span class="tag bug">Exploit Dev</span>
+        <h3>PoC para XSS</h3>
+        <p>Generá un payload funcional para Cross-Site Scripting con bypass de WAF.</p>
+        <code>$ opencode "genera un PoC XSS que bypasee\nCloudflare para este parámetro:\n?search=&lt;script&gt;alert(1)&lt;/script&gt;"</code>
+      </div>
+      <div class="uc-card">
+        <span class="tag web">Auditoría</span>
+        <h3>Revisión de configuración</h3>
+        <p>Analizá cabeceras de seguridad, CSP y configuración de servidor.</p>
+        <code>$ opencode "revisa la seguridad de estas\ncabeceras HTTP y dime qué falta:\nHTTP/2 200\nserver: nginx\n..."</code>
+      </div>
+      <div class="uc-card">
+        <span class="tag recon">OSINT</span>
+        <h3>Recolección de información</h3>
+        <p>Recopilá información pública sobre un objetivo desde la terminal.</p>
+        <code>$ opencode "investiga target.com.\nBusca emails, tech stack,\ny endpoints en Wayback Machine"</code>
       </div>
     </div>
   </div>
@@ -365,33 +527,71 @@ footer a { color: var(--accent); text-decoration: none; }
 
 <section id="comandos">
   <div class="container">
-    <h2 class="section-title">Comandos útiles</h2>
-    <p class="section-sub">Ejemplos prácticos para arrancar de una.</p>
+    <h2 class="section-title">Comandos esenciales</h2>
+    <p class="section-sub">Empezá a auditar con estos comandos directos.</p>
 
     <div class="commands-grid">
       <div class="cmd-item">
-        <span class="cmd-code">sgpt "crea un readme"</span>
-        <span class="cmd-desc">Generar un README.md para tu proyecto</span>
+        <span class="cmd-code">opencode "analiza esta URL: ..."</span>
+        <span class="cmd-desc">Analiza un endpoint o URL en busca de vulns</span>
       </div>
       <div class="cmd-item">
-        <span class="cmd-code">sgpt --code "script en python que descargue imágenes"</span>
-        <span class="cmd-desc">Generar código directamente</span>
+        <span class="cmd-code">opencode busca XSS en "..."</span>
+        <span class="cmd-desc">Busca patrones XSS en código o requests</span>
       </div>
       <div class="cmd-item">
-        <span class="cmd-code">sgpt --shell "matar proceso en puerto 3000"</span>
-        <span class="cmd-desc">Traducir lenguaje natural a comandos shell</span>
+        <span class="cmd-code">opencode "genera un PoC para ..."</span>
+        <span class="cmd-desc">Crea un script de exploit funcional</span>
       </div>
       <div class="cmd-item">
-        <span class="cmd-code">ollama run llama3</span>
-        <span class="cmd-desc">Ejecutar Llama 3 localmente</span>
+        <span class="cmd-code">opencode --file response.json</span>
+        <span class="cmd-desc">Analiza un archivo con datos de respuesta</span>
       </div>
       <div class="cmd-item">
-        <span class="cmd-code">gh copilot suggest "find large files"</span>
-        <span class="cmd-desc">Copilot te dice el comando exacto</span>
+        <span class="cmd-code">opencode "recon completo de site.com"</span>
+        <span class="cmd-desc">Escaneo automatizado de reconocimiento</span>
       </div>
       <div class="cmd-item">
-        <span class="cmd-code">ia "resumí este artículo: ..."</span>
-        <span class="cmd-desc">Resumir textos largos al instante</span>
+        <span class="cmd-code">opencode "genera reporte bug bounty"</span>
+        <span class="cmd-desc">Crea un reporte listo para enviar</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="como" style="background: var(--surface);">
+  <div class="container">
+    <h2 class="section-title">Instalación en Kali Linux</h2>
+    <p class="section-sub">Listo en segundos. Sin dependencias pesadas.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div class="content">
+          <h3>Instalá Node.js (si no lo tenés)</h3>
+          <p><code>sudo apt update && sudo apt install nodejs npm -y</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div class="content">
+          <h3>Instalá OpenCode globalmente</h3>
+          <p><code>npm install -g opencode</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div class="content">
+          <h3>Configurá tu API key</h3>
+          <p><code>opencode configure --key tu-api-key</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div class="content">
+          <h3>Empezá a auditar</h3>
+          <p><code>opencode "escanea vulnerabilidades en https://ejemplo.com"</code></p>
+        </div>
       </div>
     </div>
   </div>
@@ -399,9 +599,12 @@ footer a { color: var(--accent); text-decoration: none; }
 
 <footer>
   <div class="container">
-    Hecho con ❤️ para aprender IA desde la terminal &mdash;
-    <a href="https://github.com" target="_blank">GitHub</a> ·
-    <a href="https://vercel.app" target="_blank">Gratis con Vercel</a>
+    <div class="social">
+      <a href="https://opencode.ai" target="_blank">Web</a>
+      <a href="https://github.com/anomalyco/opencode" target="_blank">GitHub</a>
+      <a href="https://opencode.ai/docs" target="_blank">Docs</a>
+    </div>
+    OpenCode — AI para Bug Bounty y Auditoría · Hecho desde Kali Linux
   </div>
 </footer>
 
