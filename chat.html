@@ -749,16 +749,12 @@ musicInput.addEventListener('input', () => {
   suggestTimer = setTimeout(() => fetchSuggestions(q), 200);
 });
 
-async function fetchSuggestions(q) {
-  try {
-    const r = await fetch('https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=' + encodeURIComponent(q));
-    const text = await r.text();
-    const start = text.indexOf('[');
-    const end = text.lastIndexOf(']');
-    if (start === -1 || end === -1) return;
-    const data = JSON.parse(text.slice(start, end + 1));
-    const suggestions = data[1] || [];
-    if (suggestions.length === 0) return;
+function fetchSuggestions(q) {
+  // Usar JSONP para evitar CORS
+  const cb = 'ytSuggest' + Date.now();
+  window[cb] = function(data) {
+    const suggestions = (data && data[1]) || [];
+    if (suggestions.length === 0) { musicResults.classList.remove('show'); return; }
     musicResults.innerHTML = '';
     suggestions.slice(0, 8).forEach(s => {
       const title = typeof s === 'string' ? s : s[0];
@@ -769,7 +765,13 @@ async function fetchSuggestions(q) {
       musicResults.appendChild(item);
     });
     musicResults.classList.add('show');
-  } catch {}
+    try { document.head.removeChild(document.getElementById(cb)); } catch {}
+    delete window[cb];
+  };
+  const s = document.createElement('script');
+  s.id = cb;
+  s.src = 'https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&q=' + encodeURIComponent(q) + '&callback=' + cb;
+  document.head.appendChild(s);
 }
 
 function playSearch(q) {
