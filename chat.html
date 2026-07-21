@@ -327,6 +327,23 @@ function drawMatrix(){
 }
 setInterval(drawMatrix,50);
 
+const l=id=>document.getElementById(id);
+const loginScreen=l('loginScreen'),chatUI=l('chatUI');
+const nickInput=l('nickInput'),enterBtn=l('enterBtn');
+const msgInput=l('msgInput'),msgContainer=l('msgContainer');
+const form=l('form'),statusText=l('statusText');
+const emojiPicker=l('emojiPicker'),emojiToggle=l('emojiToggle');
+const stickerPicker=l('stickerPicker'),stickerToggle=l('stickerToggle');
+const typingIndicator=l('typingIndicator'),typingName=l('typingName');
+const joseBadge=l('joseBadge'),globalBadge=l('globalBadge');
+const joseTab=l('joseTab'),adminHint=l('adminHint'),loginSub=l('loginSub');
+const adminPassField=l('adminPassField'),adminPass=l('adminPass');
+const adminBtn=l('adminBtn'),adminPanel=l('adminPanel'),adminBody=l('adminBody'),closeAdmin=l('closeAdmin');
+const overlay=l('overlay'),bannedOverlay=l('bannedOverlay'),banReason=l('banReason');
+const musicBtn=l('musicBtn'),musicPanel=l('musicPanel'),musicInput=l('musicInput'),musicPlayBtn=l('musicPlayBtn'),musicNow=l('musicNow');
+const musicResults=l('musicResults');
+const floatingPlayer=l('floatingPlayer'),fpTitle=l('fpTitle'),fpAudio=l('fpAudio'),fpClose=l('fpClose');
+
 // ===== AVATARES =====
 const PRESET_AVATARS=['😎','🤖','👽','💀','🔥','🦊','🐱‍👤','🐉','🦅','👾','🧙','🚀','⚡','🛡️','👑','🐍','💎','🎯'];
 let selectedAvatar='😎';
@@ -353,23 +370,6 @@ const SK_G='chat_jose33_global',SK_J='chat_jose33_jose';
 let ws,myNick='',currentRoom='global',connected=false,isAdmin=false;
 let gMsgs=[],jMsgs=[],connUsers={},bannedNicks={};
 let typingTimer,gUnread=0,jUnread=0;
-const l=id=>document.getElementById(id);
-
-const loginScreen=l('loginScreen'),chatUI=l('chatUI');
-const nickInput=l('nickInput'),enterBtn=l('enterBtn');
-const msgInput=l('msgInput'),msgContainer=l('msgContainer');
-const form=l('form'),statusText=l('statusText');
-const emojiPicker=l('emojiPicker'),emojiToggle=l('emojiToggle');
-const stickerPicker=l('stickerPicker'),stickerToggle=l('stickerToggle');
-const typingIndicator=l('typingIndicator'),typingName=l('typingName');
-const joseBadge=l('joseBadge'),globalBadge=l('globalBadge');
-const joseTab=l('joseTab'),adminHint=l('adminHint'),loginSub=l('loginSub');
-const adminPassField=l('adminPassField'),adminPass=l('adminPass');
-const adminBtn=l('adminBtn'),adminPanel=l('adminPanel'),adminBody=l('adminBody'),closeAdmin=l('closeAdmin');
-const overlay=l('overlay'),bannedOverlay=l('bannedOverlay'),banReason=l('banReason');
-const musicBtn=l('musicBtn'),musicPanel=l('musicPanel'),musicInput=l('musicInput'),musicPlayBtn=l('musicPlayBtn'),musicNow=l('musicNow');
-const musicResults=l('musicResults');
-const floatingPlayer=l('floatingPlayer'),fpTitle=l('fpTitle'),fpAudio=l('fpAudio'),fpClose=l('fpClose');
 
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function time(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
