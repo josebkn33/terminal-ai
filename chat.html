@@ -131,8 +131,8 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 .msg .youtube-embed iframe { width: 100%; max-width: 280px; height: 158px; border: 0; display: block; }
 .msg .youtube-link { display: inline-block; margin-top: 0.2rem; font-size: 0.6rem; color: var(--text-dim); text-decoration: underline; word-break: break-all; }
 
-/* MUSIC PLAYER */
-.music-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font); font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.25rem 0.4rem; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+/* FLOATING MUSIC PLAYER */
+.music-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font); font-size: 0.55rem; letter-spacing: 1px; padding: 0.25rem 0.4rem; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
 .music-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .music-btn.playing { border-color: var(--text); color: var(--text); animation: pulse 1.5s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 8px rgba(0,255,65,0.3); } }
@@ -141,11 +141,27 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
 #musicPanel .music-input-wrap { display: flex; gap: 0.35rem; }
 #musicPanel input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.4rem 0.6rem; font-family: var(--font); font-size: 0.65rem; color: var(--text); outline: none; }
 #musicPanel input:focus { border-color: var(--text-dim); }
-#musicPanel .music-play-btn { background: var(--text); color: #000; border: none; border-radius: var(--radius); padding: 0.4rem 0.8rem; font-family: var(--font); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; font-weight: 600; }
-#musicPanel .music-now { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.5px; }
-#musicPanel .music-now .song-title { color: var(--text); }
+#musicPanel .music-play-btn { background: var(--text); color: #000; border: none; border-radius: var(--radius); padding: 0.4rem 0.8rem; font-family: var(--font); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+#musicPanel .music-play-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#musicPanel .music-info { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.5px; display: flex; align-items: center; gap: 0.3rem; }
+#musicPanel .music-info .song-title { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #musicPanel .music-close { position: absolute; top: 0.3rem; right: 0.5rem; background: none; border: none; color: var(--text-muted); font-size: 0.8rem; cursor: pointer; }
-.music-embed-player { width: 100%; max-height: 120px; border: 0; border-radius: var(--radius); }
+#musicPanel .music-results { max-height: 120px; overflow-y: auto; display: none; flex-direction: column; gap: 0.2rem; }
+#musicPanel .music-results.show { display: flex; }
+#musicPanel .music-results .mr-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; font-size: 0.6rem; }
+#musicPanel .music-results .mr-item:hover { border-color: var(--text-dim); background: var(--surface-2); }
+#musicPanel .music-results .mr-item .mr-thumb { width: 32px; height: 24px; border-radius: 2px; flex-shrink: 0; object-fit: cover; background: var(--surface-3); }
+#musicPanel .music-results .mr-item .mr-title { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#musicPanel .music-results .mr-item .mr-dur { color: var(--text-muted); font-size: 0.5rem; }
+#musicPanel .music-loading { font-size: 0.55rem; color: var(--text-muted); display: none; }
+#musicPanel .music-loading.show { display: block; }
+
+.floating-player { position: fixed; bottom: 70px; right: 20px; width: 340px; z-index: 50; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 0 30px rgba(0,0,0,0.8); display: none; }
+.floating-player.show { display: block; }
+.floating-player iframe { width: 100%; height: 180px; border: 0; display: block; }
+.floating-player .fp-bar { background: rgba(0,0,0,0.95); padding: 0.35rem 0.6rem; display: flex; align-items: center; gap: 0.4rem; font-size: 0.55rem; }
+.floating-player .fp-bar .fp-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px; }
+.floating-player .fp-bar .fp-close { background: none; border: none; color: var(--text-muted); font-size: 0.7rem; cursor: pointer; padding: 0.1rem; }
 
 /* ADMIN PANEL */
 #adminPanel { display: none; position: absolute; top: 0; right: 0; width: 280px; height: 100%; background: rgba(0,0,0,0.95); border-left: 1px solid var(--border); z-index: 10; flex-direction: column; }
@@ -229,11 +245,20 @@ canvas#matrix { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-i
   <div id="musicPanel">
     <button class="music-close" id="musicClose">✕</button>
     <div class="music-input-wrap">
-      <input type="text" id="musicInput" placeholder="pegá URL de YouTube..." />
-      <button class="music-play-btn" id="musicPlayBtn">▶ PLAY</button>
+      <input type="text" id="musicInput" placeholder="buscá una canción..." />
+      <button class="music-play-btn" id="musicPlayBtn">🔍 BUSCAR</button>
     </div>
-    <div class="music-now">🎵 Ahora: <span class="song-title" id="musicNow">Ninguna</span></div>
-    <div id="musicEmbedWrap"></div>
+    <div class="music-loading" id="musicLoading">Buscando...</div>
+    <div class="music-results" id="musicResults"></div>
+    <div class="music-info">🎵 <span class="song-title" id="musicNow">Sin reproducción</span></div>
+  </div>
+
+  <div class="floating-player" id="floatingPlayer">
+    <div class="fp-bar">
+      <span class="fp-title" id="fpTitle">Sin música</span>
+      <button class="fp-close" id="fpClose">✕</button>
+    </div>
+    <div id="fpEmbed"></div>
   </div>
 
   <div class="msgs-wrap">
@@ -343,7 +368,9 @@ const joseTab = l('joseTab'), adminHint = l('adminHint'), loginSub = l('loginSub
 const adminPassField = l('adminPassField'), adminPass = l('adminPass');
 const adminBtn = l('adminBtn'), adminPanel = l('adminPanel'), adminBody = l('adminBody'), closeAdmin = l('closeAdmin');
 const overlay = l('overlay'), bannedOverlay = l('bannedOverlay'), banReason = l('banReason');
-const musicBtn = l('musicBtn'), musicPanel = l('musicPanel'), musicInput = l('musicInput'), musicPlayBtn = l('musicPlayBtn'), musicNow = l('musicNow'), musicEmbedWrap = l('musicEmbedWrap'), musicClose = l('musicClose');
+const musicBtn = l('musicBtn'), musicPanel = l('musicPanel'), musicInput = l('musicInput'), musicPlayBtn = l('musicPlayBtn'), musicNow = l('musicNow'), musicClose = l('musicClose');
+const musicResults = l('musicResults'), musicLoading = l('musicLoading');
+const floatingPlayer = l('floatingPlayer'), fpTitle = l('fpTitle'), fpEmbed = l('fpEmbed'), fpClose = l('fpClose');
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function time() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
@@ -653,35 +680,60 @@ function addSysMsg(text) {
   saveMessages();
 }
 
-// MUSIC PLAYER
-let currentMusicVid = '';
+// MUSIC PLAYER — búsqueda por nombre, reproductor flotante
+let currentVid = '';
 musicBtn.addEventListener('click', () => { musicPanel.classList.toggle('show'); if (musicPanel.classList.contains('show')) musicInput.focus(); });
 musicClose.addEventListener('click', () => musicPanel.classList.remove('show'));
-musicPlayBtn.addEventListener('click', playMusic);
-musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') playMusic(); });
-function playMusic() {
-  const url = musicInput.value.trim();
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-  if (!match) { alert('URL de YouTube inválida'); return; }
-  const vid = match[1];
-  currentMusicVid = vid;
-  musicNow.textContent = 'Cargando...';
-  musicEmbedWrap.innerHTML = '<iframe class="music-embed-player" src="https://www.youtube.com/embed/' + vid + '?autoplay=1&rel=0" allow="autoplay" allowfullscreen></iframe>';
+musicPlayBtn.addEventListener('click', searchMusic);
+musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchMusic(); });
+fpClose.addEventListener('click', () => { floatingPlayer.classList.remove('show'); musicBtn.classList.remove('playing'); });
+
+async function searchMusic() {
+  const q = musicInput.value.trim();
+  if (!q || q.length < 2) return;
+  musicLoading.classList.add('show');
+  musicResults.innerHTML = '';
+  musicResults.classList.remove('show');
+  try {
+    const r = await fetch('https://inv.nadeko.net/api/v1/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    musicLoading.classList.remove('show');
+    const vids = d.filter(v => v.type === 'video' && v.videoId).slice(0, 6);
+    if (vids.length === 0) { musicResults.innerHTML = '<div style="font-size:0.55rem;color:var(--text-muted);padding:0.3rem;">Sin resultados</div>'; musicResults.classList.add('show'); return; }
+    musicResults.innerHTML = '';
+    vids.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'mr-item';
+      item.innerHTML = '<img class="mr-thumb" src="https://i.ytimg.com/vi/' + v.videoId + '/default.jpg" alt="">' +
+        '<span class="mr-title">' + esc(v.title || 'Sin título') + '</span>' +
+        '<span class="mr-dur">' + (v.lengthSeconds ? Math.floor(v.lengthSeconds/60) + ':' + String(v.lengthSeconds%60).padStart(2,'0') : '') + '</span>';
+      item.addEventListener('click', () => playVideo(v.videoId, v.title || 'Canción'));
+      musicResults.appendChild(item);
+    });
+    musicResults.classList.add('show');
+  } catch (e) {
+    musicLoading.classList.remove('show');
+    musicResults.innerHTML = '<div style="font-size:0.55rem;color:var(--red);padding:0.3rem;">Error de búsqueda</div>';
+    musicResults.classList.add('show');
+  }
+}
+
+function playVideo(vid, title) {
+  currentVid = vid;
+  fpEmbed.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '?autoplay=1&rel=0" allow="autoplay" allowfullscreen style="width:100%;height:180px;border:0;"></iframe>';
+  fpTitle.textContent = title;
+  floatingPlayer.classList.add('show');
   musicBtn.classList.add('playing');
-  // Fetch title via oEmbed
-  fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + vid + '&format=json')
-    .then(r => r.json())
-    .then(d => { musicNow.textContent = d.title; })
-    .catch(() => { musicNow.textContent = 'YouTube Video'; });
-  // Broadcast to chat
+  musicNow.textContent = title;
+  musicPanel.classList.remove('show');
+  // Share en chat
   const priv = currentRoom === 'jose';
   const ch = priv ? CH_JOSE : CH_GLOBAL;
-  broadcast(ch, 'message', { text: '🎵 ' + url, priv });
-  const msg = { user: myNick, text: '🎵 ' + url, time: time(), priv };
+  broadcast(ch, 'message', { text: '🎵 ' + title + ' https://www.youtube.com/watch?v=' + vid, priv });
+  const msg = { user: myNick, text: '🎵 ' + title, time: time(), priv };
   if (priv) { joseMsgs.push(msg); if (currentRoom === 'jose') renderMsgs(); }
   else { globalMsgs.push(msg); if (currentRoom === 'global') renderMsgs(); }
   saveMessages();
-  musicPanel.classList.remove('show');
 }
 
 // ADMIN PANEL
