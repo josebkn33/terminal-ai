@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IA en la Terminal — Aprende a usar AI desde la línea de comandos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface-2: #1a1a2e;
+  --border: #1e1e32;
+  --text: #e4e4ed;
+  --text-muted: #8888a0;
+  --accent: #6c5ce7;
+  --accent-glow: rgba(108, 92, 231, 0.25);
+  --green: #00d68f;
+  --orange: #ff9f43;
+  --pink: #fd79a8;
+  --radius: 12px;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+::selection { background: var(--accent); color: #fff; }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 1rem 2rem;
+  background: rgba(10, 10, 15, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+nav .logo {
+  font-weight: 700; font-size: 1.2rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+nav .logo span { color: var(--accent); }
+nav .logo code { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--green); background: var(--surface-2); padding: 0.15rem 0.5rem; border-radius: 6px; }
+nav .links { display: flex; gap: 2rem; align-items: center; }
+nav .links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+nav .links a:hover { color: var(--text); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  padding: 6rem 2rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.hero-content { position: relative; max-width: 800px; }
+.hero .badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 100px; padding: 0.4rem 1rem 0.4rem 0.5rem;
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2rem;
+}
+.hero .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.hero h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+}
+.hero h1 .gradient {
+  background: linear-gradient(135deg, var(--accent), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+}
+.hero .terminal-shot {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  margin: 0 auto;
+  max-width: 650px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.hero .terminal-shot .prompt { color: var(--green); }
+.hero .terminal-shot .cmd { color: var(--text); }
+.hero .terminal-shot .output { color: var(--text-muted); }
+.hero .terminal-shot .cursor { display: inline-block; width: 8px; height: 1.2em; background: var(--accent); animation: blink 1s steps(1) infinite; vertical-align: text-bottom; margin-left: 2px; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.hero .cta { margin-top: 2.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.8rem 2rem;
+  border-radius: 100px;
+  font-weight: 600; font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer; border: none;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5a4bd1; transform: translateY(-2px); box-shadow: 0 8px 30px var(--accent-glow); }
+.btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--surface-2); transform: translateY(-2px); }
+
+section { padding: 5rem 0; }
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.section-sub {
+  text-align: center;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: all 0.3s;
+}
+.tool-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+.tool-card .icon { font-size: 2rem; margin-bottom: 1rem; }
+.tool-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+.tool-card p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+.tool-card code {
+  display: inline-block;
+  background: var(--surface-2);
+  color: var(--green);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  margin-top: 0.8rem;
+}
+
+.steps {
+  display: flex; flex-direction: column; gap: 0;
+  max-width: 700px; margin: 0 auto;
+}
+.step {
+  display: flex; gap: 1.5rem;
+  padding: 1.5rem 0;
+  position: relative;
+}
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 19px; top: 3.5rem; bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.step .num {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.step.active .num { background: var(--accent); border-color: var(--accent); color: #fff; }
+.step h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+.step p { color: var(--text-muted); font-size: 0.9rem; }
+
+.commands-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.75rem;
+}
+.cmd-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.cmd-item .cmd-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--green);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cmd-item .cmd-desc { color: var(--text-muted); font-size: 0.85rem; }
+
+footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+footer a { color: var(--accent); text-decoration: none; }
+
+@media (max-width: 640px) {
+  nav .links { display: none; }
+  .hero { padding: 5rem 1rem 3rem; }
+  .container { padding: 0 1rem; }
+  .hero .terminal-shot { font-size: 0.7rem; padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <code>~$</code>
+    <span>Terminal<span>AI</span></span>
+  </div>
+  <div class="links">
+    <a href="#herramientas">Herramientas</a>
+    <a href="#como">Cómo empezar</a>
+    <a href="#comandos">Comandos</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <div class="badge">
+      <span class="dot"></span>
+      Nueva forma de aprender
+    </div>
+    <h1>
+      Usá inteligencia artificial<br />
+      <span class="gradient">directamente desde la terminal</span>
+    </h1>
+    <p>
+      Aprendé a usar herramientas de IA como ChatGPT, Claude, Copilot y más
+      sin salir de la línea de comandos. Rápido, gratis y sin distracciones.
+    </p>
+
+    <div class="terminal-shot">
+      <span class="prompt">$ </span><span class="cmd">ia "explicame cómo funcionan las redes neuronales en 3 líneas"</span><br />
+      <span class="output">Las redes neuronales son modelos inspirados en el cerebro humano.</span><br />
+      <span class="output">Consisten en capas de neuronas artificiales que procesan información</span><br />
+      <span class="output">y aprenden patrones ajustando sus conexiones (pesos) con datos de entrenamiento.</span><br />
+      <span class="prompt">$ </span><span class="cursor"></span>
+    </div>
+
+    <div class="cta">
+      <a href="#herramientas" class="btn btn-primary">Ver herramientas</a>
+      <a href="#como" class="btn btn-secondary">Cómo empezar</a>
+    </div>
+  </div>
+</section>
+
+<section id="herramientas">
+  <div class="container">
+    <h2 class="section-title">Herramientas disponibles</h2>
+    <p class="section-sub">Usá las mismas IAs que en el navegador, pero más rápido y sin salir de tu terminal.</p>
+
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="icon">🟢</div>
+        <h3>OpenAI (ChatGPT)</h3>
+        <p>Consultá GPT-4 y GPT-3.5 desde la terminal. Ideal para preguntas, código, traducciones y más.</p>
+        <code>pip install openai</code>
+      </div>
+      <div class="tool-card">
+        <div class="icon">🟣</div>
+        <h3>Claude (Anthropic)</h3>
+        <p>Accedé a Claude 3 desde tu terminal. Perfecto para análisis de texto, documentación y razonamiento.</p>
+        <code>npm install @anthropic-ai/sdk</code>
+      </div>
+      <div class="tool-card">
+        <div class="icon">🔵</div>
+        <h3>Ollama (Local)</h3>
+        <p>Ejecutá modelos open-source como Llama 3, Mistral y CodeLlama localmente, sin internet.</p>
+        <code>ollama run llama3.2</code>
+      </div>
+      <div class="tool-card">
+        <div class="icon">🟠</div>
+        <h3>GitHub Copilot CLI</h3>
+        <p>Traducí lenguaje natural a comandos de terminal. Escribí qué querés hacer y Copilot lo ejecuta.</p>
+        <code>gh copilot suggest</code>
+      </div>
+      <div class="tool-card">
+        <div class="icon">⚪</div>
+        <h3>Groq</h3>
+        <p>IAs ultrarrápidas con inferencia en hardware dedicado. Ideal para respuestas en tiempo real.</p>
+        <code>pip install groq</code>
+      </div>
+      <div class="tool-card">
+        <div class="icon">🟤</div>
+        <h3>ShellGPT</h3>
+        <p>Wrapper que conecta con múltiples IAs desde la terminal. Instalación única, uso inmediato.</p>
+        <code>pip install shell-gpt</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="como" style="background: var(--surface);">
+  <div class="container">
+    <h2 class="section-title">Cómo empezar en 3 pasos</h2>
+    <p class="section-sub">Sin cuentas complicadas. Sin burocracia. Solo terminal.</p>
+
+    <div class="steps">
+      <div class="step active">
+        <div class="num">1</div>
+        <div>
+          <h3>Elegí tu herramienta</h3>
+          <p>Decidí si querés usar la nube (ChatGPT, Claude) o algo local (Ollama). Para empezar, Ollama es la opción más simple porque no necesita API keys.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>Instalá el cliente</h3>
+          <p>Cada herramienta tiene un comando de instalación simple. Por ejemplo: <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">brew install ollama</code> o <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">pip install shell-gpt</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3>Empezá a preguntar</h3>
+          <p>Ya está. Escribí tu primer prompt en la terminal. <code style="background:var(--surface-2);padding:0.1rem 0.4rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--green);">sgpt "¿qué es un blockchain en términos simples?"</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="comandos">
+  <div class="container">
+    <h2 class="section-title">Comandos útiles</h2>
+    <p class="section-sub">Ejemplos prácticos para arrancar de una.</p>
+
+    <div class="commands-grid">
+      <div class="cmd-item">
+        <span class="cmd-code">sgpt "crea un readme"</span>
+        <span class="cmd-desc">Generar un README.md para tu proyecto</span>
+      </div>
+      <div class="cmd-item">
+        <span class="cmd-code">sgpt --code "script en python que descargue imágenes"</span>
+        <span class="cmd-desc">Generar código directamente</span>
+      </div>
+      <div class="cmd-item">
+        <span class="cmd-code">sgpt --shell "matar proceso en puerto 3000"</span>
+        <span class="cmd-desc">Traducir lenguaje natural a comandos shell</span>
+      </div>
+      <div class="cmd-item">
+        <span class="cmd-code">ollama run llama3</span>
+        <span class="cmd-desc">Ejecutar Llama 3 localmente</span>
+      </div>
+      <div class="cmd-item">
+        <span class="cmd-code">gh copilot suggest "find large files"</span>
+        <span class="cmd-desc">Copilot te dice el comando exacto</span>
+      </div>
+      <div class="cmd-item">
+        <span class="cmd-code">ia "resumí este artículo: ..."</span>
+        <span class="cmd-desc">Resumir textos largos al instante</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    Hecho con ❤️ para aprender IA desde la terminal &mdash;
+    <a href="https://github.com" target="_blank">GitHub</a> ·
+    <a href="https://vercel.app" target="_blank">Gratis con Vercel</a>
+  </div>
+</footer>
+
+</body>
+</html>
