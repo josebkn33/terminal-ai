@@ -671,7 +671,6 @@ stickerPicker.querySelectorAll('button').forEach(btn => {
   btn.addEventListener('click', () => {
     const s = btn.dataset.sticker;
     if (!s || !connected || !ws) return;
-    if (checkFlood(myNick)) { addSysMsg('⏳ ' + myNick + ' — esperá antes de enviar'); return; }
     const priv = currentRoom === 'jose';
     const ch = priv ? CH_JOSE : CH_GLOBAL;
     broadcast(ch, 'message', { text: '/' + s, priv, sticker: s });
