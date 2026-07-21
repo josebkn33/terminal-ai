@@ -240,7 +240,7 @@ canvas#matrix{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;point
       <button class="room-tab active" data-room="global">🌐 Global <span class="badge" id="globalBadge"></span></button>
       <button class="room-tab" data-room="jose" id="joseTab">🔒 Jose <span class="badge" id="joseBadge"></span></button>
     </div>
-    <button class="header-btn" id="botBtn">🤖</button>
+    <button class="header-btn" id="botBtn">🤖 IA</button>
     <button class="header-btn" id="musicBtn">🎵</button>
     <button class="header-btn" id="adminBtn">⚙️</button>
     <div class="status-badge"><span class="dot"></span><span id="statusText">WAIT</span></div>
@@ -470,12 +470,22 @@ function broadcast(topic,type,extra){
 function sendMsg(text,priv){
   if(!ws||!connected)return;
   const ch=priv?CH_J:CH_G;
-  if(!priv&&text.startsWith('/ai ')&&text.length>4){
-    const p=text.slice(4).trim();if(!p)return;
-    broadcast(ch,'message',{text,priv});
-    const m={user:myNick,text,time:time(),priv,avatar:selectedAvatar};
-    gMsgs.push(m);if(currentRoom==='global')renderMsgs();saveMsgs();
-    callAI(p);return;
+  if(!priv){
+    if(text.startsWith('/ai ')&&text.length>4){
+      const p=text.slice(4).trim();if(!p)return;
+      broadcast(ch,'message',{text,priv});
+      const m={user:myNick,text,time:time(),priv,avatar:selectedAvatar};
+      gMsgs.push(m);if(currentRoom==='global')renderMsgs();saveMsgs();
+      callAI(p);return;
+    }
+    if(text==='/ia off'||text==='/bot off'){
+      if(botActive){botToggle();addSys('▸ '+AI_USER+' desactivado')}
+      msgInput.value='';return;
+    }
+    if(text==='/ia on'||text==='/bot on'){
+      if(!botActive){botToggle();addSys('▸ '+AI_USER+' activado')}
+      msgInput.value='';return;
+    }
   }
   broadcast(ch,'message',{text,priv});
   const msg={user:myNick,text,time:time(),priv,avatar:selectedAvatar};
@@ -497,17 +507,23 @@ async function callAI(prompt){
   const n=Date.now();if(n-aiCooldown<4000)return;aiCooldown=n;
   let t='';
   try{
-    const r=await fetch('https://api-inference.huggingface.co/models/google/flan-t5-large',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({inputs:'Respondé como hacker en español, breve: '+prompt})
-    });
-    if(!r.ok)throw Error();
-    const d=await r.json();
-    const raw=Array.isArray(d)?d[0]?.generated_text:d?.generated_text;
-    if(raw){t=raw.replace(prompt,'').trim();if(t.length>300)t=t.slice(0,300)}
+    const r=await fetch('https://text.pollinations.ai/'+encodeURIComponent('Respondé como hacker en español, breve: '+prompt));
+    if(r.ok){t=await r.text();if(t.length>300)t=t.slice(0,300)}
   }catch{}
-  if(!t)t=AI_FALLBACKS[Math.floor(Math.random()*AI_FALLBACKS.length)];
+  if(!t.trim())t=AI_FALLBACKS[Math.floor(Math.random()*AI_FALLBACKS.length)];
   broadcast(CH_G,'message',{text:t,user:AI_USER,avatar:AI_AVATAR});
+}
+
+function botToggle(){
+  botActive=!botActive;botBtn.classList.toggle('bot-on');
+  if(botActive){
+    broadcast(CH_G,'join',{user:AI_USER,avatar:AI_AVATAR});
+    gMsgs.push({user:'',text:'▸ '+AI_USER+' se conectó',time:time(),system:true});
+  }else{
+    broadcast(CH_G,'leave',{user:AI_USER,avatar:AI_AVATAR});
+    gMsgs.push({user:'',text:'▸ '+AI_USER+' se desconectó',time:time(),system:true});
+  }
+  if(currentRoom==='global')renderMsgs();saveMsgs();
 }
 
 // TABS
@@ -639,17 +655,7 @@ function playAudius(t){
 }
 
 // BOT TOGGLE
-botBtn.addEventListener('click',()=>{
-  botActive=!botActive;botBtn.classList.toggle('bot-on');
-  if(botActive){
-    broadcast(CH_G,'join',{user:AI_USER,avatar:AI_AVATAR});
-    gMsgs.push({user:'',text:'▸ '+AI_USER+' se conectó',time:time(),system:true});
-  }else{
-    broadcast(CH_G,'leave',{user:AI_USER,avatar:AI_AVATAR});
-    gMsgs.push({user:'',text:'▸ '+AI_USER+' se desconectó',time:time(),system:true});
-  }
-  if(currentRoom==='global')renderMsgs();saveMsgs();
-});
+botBtn.addEventListener('click',botToggle);
 
 // ADMIN PANEL
 adminBtn.addEventListener('click',()=>{adminPanel.classList.add('show');overlay.classList.add('show');updateAdmin()});
