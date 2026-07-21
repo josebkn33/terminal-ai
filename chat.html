@@ -686,9 +686,24 @@ function addSysMsg(text) {
 let currentVid = '', suggestTimer;
 musicBtn.addEventListener('click', () => { musicPanel.classList.toggle('show'); if (musicPanel.classList.contains('show')) musicInput.focus(); });
 musicClose.addEventListener('click', () => musicPanel.classList.remove('show'));
-musicPlayBtn.addEventListener('click', () => searchMusic(musicInput.value.trim()));
-musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { searchMusic(musicInput.value.trim()); } });
+musicPlayBtn.addEventListener('click', () => handleMusicInput());
+musicInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { handleMusicInput(); } });
 fpClose.addEventListener('click', () => { floatingPlayer.classList.remove('show'); musicBtn.classList.remove('playing'); });
+
+function handleMusicInput() {
+  const val = musicInput.value.trim();
+  if (!val) return;
+  // Detectar URL de YouTube directa
+  const ytMatch = val.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + ytMatch[1] + '&format=json')
+      .then(r => r.json())
+      .then(d => playVideo(ytMatch[1], d.title || 'YouTube Video'))
+      .catch(() => playVideo(ytMatch[1], 'YouTube Video'));
+    return;
+  }
+  searchMusic(val);
+}
 
 // Autocomplete mientras escribe
 musicInput.addEventListener('input', () => {
